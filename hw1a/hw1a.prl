@@ -3,7 +3,7 @@
 ##########################################################
 ##  SHELL FOR END-OF-SENTENCE CLASSIFIER
 ##
-##    hw1a.prl < sent.data.train sent.data.test
+##    hw1a.prl < sent.data.test
 ##
 ##  Suggestion: run in a wide window
 ##########################################################
@@ -15,7 +15,30 @@ $L="./classes";
 &initialize_set(*sentence_,"$L/sentence_internal");
 &initialize_set(*timeterms_,"$L/timeterms"); 
 
-sub getFeatures() {
+##########################################################
+## GET_FEATURE_VECTOR - creates a feature vector to be
+##                      classified by logistic regression
+##
+##  The 12-dimensional feature vector consists of (in the
+##  order of returned values) the following values: 
+##  1. Boolean : R1 indicates new paragraph
+##  2. Boolean : R1 is either . or , or ; or -
+##  3. Boolean : R1 is a double left quote (``)
+##  4. Boolean : R1 consists of digits only
+##  5. Boolean : L1 starts in upper case
+##  6. Boolean : R1 belongs to 'sentence internal'
+##  7. Boolean : R1 belongs to 'title'
+##  8. Boolean : R1 belongs to 'abbreviation'
+##  9. Boolean : R1 belongs to 'time term'
+## 10. Number  : # of words to the left before delimeter
+## 11. Number  : # of words to the right before delimeter
+## 12. Number  : # of spaces following the period
+##
+##  The true class label and full line of data are
+##  returned along with the feature vector.
+##########################################################
+
+sub get_feature_vector() {
     my $line = shift;
     
     @words = split(' ', $_);
@@ -35,54 +58,55 @@ sub getFeatures() {
     $l1Time = &classmember($L1, timeterms_)? 1 : 0;
        
     return ($r1NewPara, $r1Special, $r1DoubleQ, $r1AllDigit, $l1Upper, $l1Title, 
-    	$l1Abbrev, $l1SentInt, $l1Time, $words[9], $words[10], $words[11], $words[0]);
+    	$l1Abbrev, $l1SentInt, $l1Time, $words[9], $words[10], $words[11], $words[0], $line);
 }
 
-sub createArffFile() {
-	# Get file name to store data
-    my $file_name = shift;
-    
-    # Delete previously created file
-    unlink($file_name);
-    
-    # Start printing features to file
-    open (MYFILE, '>>', $file_name) || die "Can't open file $file_name: $!";
-    
-    &printHeader(\*MYFILE);
-    
-    while (<>) {
-    	local @feature_vector = &getFeatures($_);
+##########################################################
+## 
+## Performs logistic regression classification for each
+## line of data. The coefficients and intercept value 
+## were determined using the output of Weka trained model.
+##
+##########################################################
+
+while (<>) {
+    local @feature_vector = &get_feature_vector($_);
     	
-    	$" = ',';
-        
-        print MYFILE "@feature_vector[0..$#feature_vector]", "\n";
+    my $logistic_value = 0.0;
+    
+    # Perform dot-product with coeffcients
+    $logistic_value += (7.2115 * $feature_vector[0]);
+    $logistic_value += (-3.2753 * $feature_vector[1]);
+    $logistic_value += (2.2672 * $feature_vector[2]);
+    $logistic_value += (-2.9189 * $feature_vector[3]);
+    $logistic_value += (-6.7567 * $feature_vector[4]);
+    $logistic_value += (-5.4091 * $feature_vector[5]);
+    $logistic_value += (-4.24 * $feature_vector[6]);
+    $logistic_value += (-5.8588 * $feature_vector[7]);
+    $logistic_value += (1881.8571 * $feature_vector[8]);
+    $logistic_value += (0.0012 * $feature_vector[9]);
+    $logistic_value += (-0.0004 * $feature_vector[10]);
+    $logistic_value += (2.1213 * $feature_vector[11]);
+    
+    # Add intercept value
+    $logistic_value += 1.4238;
+    
+    my $class = $feature_vector[12];
+    my $line = $feature_vector[13];
+    
+    # Classify according to probability
+    if ($logistic_value > 0.5) {
+    	&ret($class,'EOS',$line);
+    } else {
+    	&ret($class,'NEOS',$line);
     }
-    
-    close (MYFILE);
 }
 
-sub printHeader {
-    $MYFILE = $_[0];
+$correct_percentage = ($correct/($correct+$incorrect)) * 100;
+$incorrect_percentage = 100 - $correct_percentage;
 
-    print { $MYFILE } "\@relation eos\n";
-    
-    print { $MYFILE } "\@attribute r1NewPara {0, 1}\n";
-    print { $MYFILE } "\@attribute r1Special {0, 1}\n";
-    print { $MYFILE } "\@attribute r1DoubleQ {0, 1}\n";
-    print { $MYFILE } "\@attribute r1AllDigit {0, 1}\n";
-    print { $MYFILE } "\@attribute l1Upper {0, 1}\n";
-    print { $MYFILE } "\@attribute l1Title {0, 1}\n";
-    print { $MYFILE } "\@attribute l1Abbrev {0, 1}\n";
-    print { $MYFILE } "\@attribute l1SentInt {0, 1}\n";
-    print { $MYFILE } "\@attribute l1Time {0, 1}\n";
-    
-    print { $MYFILE } "\@attribute lLength numeric\n";
-    print { $MYFILE } "\@attribute rLength numeric\n";
-    print { $MYFILE } "\@attribute Nspaces numeric\n";
-
-    print { $MYFILE } "\@attribute class {EOS, NEOS}\n";
-    print { $MYFILE } "\@data\n";
-}
+printf("### HW1A schoi60 - OVERALL CORRECT: %u = %.1f%%    INCORRECT: %u = %.1f%%\n", 
+	$correct, $correct_percentage, $incorrect, $incorrect_percentage);
  
 ##########################################################
 ## RET - prints full line for errors and keeps score
@@ -94,17 +118,18 @@ sub printHeader {
 ##########################################################
  
 sub ret {
-   local($where,$trueclass,$id,$givenclass) = @_;
-   
-   if ($trueclass eq $givenclass) {
-      print ".. (at ",$where,") -  ", $_;
-      $correct++; 
-   }
-   else {
-      print "XX (at ",$where,") -  ", $_;
-      $incorrect++;
-   }
-   # next;
+
+    my $trueclass  = shift;   # what is the true sentence class ('NEOS','EOS')
+    my $givenclass = shift;   # what is the sentence class my rule gives
+    my $line       = shift;   # the actual line tested
+
+    if ($trueclass eq $givenclass) {
+    	$correct++;
+    } else {
+    	$incorrect++;
+    }
+    
+    print $givenclass, " ", $line;
 }
 
 ##########################################################
@@ -136,7 +161,3 @@ sub initialize_set{
     }
     close (FILE);
 }
-
-&createArffFile("train.arff");
-
-&createArffFile("test.arff");
