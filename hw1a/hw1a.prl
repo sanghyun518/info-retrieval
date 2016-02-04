@@ -10,79 +10,78 @@
 
 $L="./classes";
 
-&initialize_set(*abbrevs,"$L/abbrevs"); 
-&initialize_set(*titles,"$L/titles"); 
-&initialize_set(*sentence_internal,"$L/sentence_internal");
-
+&initialize_set(*abbrevs_,"$L/abbrevs"); 
+&initialize_set(*titles_,"$L/titles"); 
+&initialize_set(*sentence_,"$L/sentence_internal");
+&initialize_set(*timeterms_,"$L/timeterms"); 
 
 sub getFeatures() {
     my $line = shift;
-    my $class, $r1Ucfirst, $r1NewPara, $r1Comma, $r1Period, $l1Title, $l1Abbrev, $lLength, $rLength, $Nspaces, $r1Quote, $r1Semi, $l1Internal, $l1Cap;
-    @words = split(' ', $line);
-    ($class, $id, $L3, $L2, $L1, $c, $R1, $R2, $R3, $lLength, $rLength, $Nspaces) = @words;
-    if ($R1 =~ /^[A-Z]/) {$r1Ucfirst = 1} else {$r1Ucfirst = 0}
-    if ($R1 eq "<P>") {$r1NewPara = 1} else {$r1NewPara = 0}
-    if ($R1 eq ".") {$r1Period = 1} else {$r1Period = 0}
-    if ($R1 eq ",") {$r1Comma = 1} else {$r1Comma = 0}
-    if (&classmember(lc($L1), titles)) {$l1Title = 1} else {$l1Title = 0}
-    if (&classmember(lc($L1), abbrevs)) {$l1Abbrev = 1} else {$l1Abbrev = 0}
-    if ($R1 eq "``") {$r1Quote = 1} else {$r1Quote = 0}
-    if ($R1 eq ";") {$r1Semi = 1} else {$r1Semi = 0}
-    if (&classmember(lc($L1), sentence_internal)) {$l1Internal = 1} else {$l1Internal = 0}
-    if ($L1 =~ /^[A-Z]$/) {$l1Cap = 1} else {$l1Cap = 0}
+    
+    @words = split(' ', $_);
+    
+    my $R1 = $words[6];
+    my $L1 = $words[4];
+    
+    $r1NewPara = $R1 eq "<P>" ? 1 : 0;
+    $r1Special = $R1 =~ /[\.,;-]/ ? 1 : 0;
+    $r1DoubleQ = $R1 eq "``" ? 1 : 0;
+    $r1AllDigit = $R1 =~ /[0-9]+/ ? 1 : 0;
+    $l1Upper = $L1 =~ /^[A-Z]$/ ? 1 : 0;
+    
+    $l1SentInt = &classmember($L1, sentence_) ? 1 : 0;
+    $l1Title = &classmember($L1, titles_) ? 1 : 0;
+    $l1Abbrev = &classmember($L1, abbrevs_)? 1 : 0;
+    $l1Time = &classmember($L1, timeterms_)? 1 : 0;
        
-    return ($class, $id, $r1Ucfirst, $r1NewPara, $r1Comma, $r1Period, $l1Title, $l1Abbrev, $lLength, $rLength, $Nspaces, $r1Quote, $r1Semi, $l1Internal, $l1Cap);
-}
-
-sub genResult() {
-    while (<>) {
-
-        local ($class, $id, $r1Ucfirst, $r1NewPara, $r1Comma, $r1Period, $l1Title, $l1Abbrev, $lLength, $rLength, $Nspaces, $r1Quote, $r1Semi, $l1Internal, $l1Cap) = &getFeatures($_);
-        &ret($class, $id, &classify($class, $r1Ucfirst, $r1NewPara, $r1Comma, $r1Period, $l1Title, $l1Abbrev, $lLength, $rLength, $Nspaces, $r1Quote, $r1Semi, $l1Internal, $l1Cap));
-        
-    }
-
-    print "Your score is: ", $correct/($correct+$incorrect), "\n";
+    return ($r1NewPara, $r1Special, $r1DoubleQ, $r1AllDigit, $l1Upper, $l1Title, 
+    	$l1Abbrev, $l1SentInt, $l1Time, $words[9], $words[10], $words[11], $words[0]);
 }
 
 sub createArffFile() {
+	# Get file name to store data
     my $file_name = shift;
+    
+    # Delete previously created file
     unlink($file_name);
+    
+    # Start printing features to file
     open (MYFILE, '>>', $file_name) || die "Can't open file $file_name: $!";
+    
     &printHeader(\*MYFILE);
+    
     while (<>) {
-        local ($class, $id, $r1Ucfirst, $r1NewPara, $r1Comma, $r1Period, $l1Title, $l1Abbrev, $lLength, $rLength, $Nspaces, $r1Quote, $r1Semi, $l1Internal, $l1Cap) = &getFeatures($_);
-        print MYFILE $r1Ucfirst, ",", $r1NewPara, ",", $r1Comma, ",",  $r1Period, ",",  $l1Title, ",",  $l1Abbrev, ",",  $lLength, ",",  $rLength, ",",  $Nspaces, ",",  $r1Quote, ",",  $r1Semi, ",",  $l1Internal, ",",  $l1Cap, ",", $class, "\n";
+    	local @feature_vector = &getFeatures($_);
+    	
+    	$" = ',';
+        
+        print MYFILE "@feature_vector[0..$#feature_vector]", "\n";
     }
+    
     close (MYFILE);
 }
 
 sub printHeader {
     $MYFILE = $_[0];
 
-    print { $MYFILE } "\@RELATION eos\n";
-    print { $MYFILE } "\@ATTRIBUTE r1Ucfirst {0, 1}\n";
-    print { $MYFILE } "\@ATTRIBUTE r1NewPara {0, 1}\n";
-    print { $MYFILE } "\@ATTRIBUTE r1Comma {0, 1}\n";
-    print { $MYFILE } "\@ATTRIBUTE r1Period {0, 1}\n";
-    print { $MYFILE } "\@ATTRIBUTE l1Title {0, 1}\n";
-
-    print { $MYFILE } "\@ATTRIBUTE l1Abbrev {0, 1}\n";
-
-    print { $MYFILE } "\@ATTRIBUTE lLength numeric\n";
+    print { $MYFILE } "\@relation eos\n";
     
-    print { $MYFILE } "\@ATTRIBUTE rLength numeric\n";
-    print { $MYFILE } "\@ATTRIBUTE Nspaces numeric\n";
-    print { $MYFILE } "\@ATTRIBUTE r1Quote {0, 1}\n";
+    print { $MYFILE } "\@attribute r1NewPara {0, 1}\n";
+    print { $MYFILE } "\@attribute r1Special {0, 1}\n";
+    print { $MYFILE } "\@attribute r1DoubleQ {0, 1}\n";
+    print { $MYFILE } "\@attribute r1AllDigit {0, 1}\n";
+    print { $MYFILE } "\@attribute l1Upper {0, 1}\n";
+    print { $MYFILE } "\@attribute l1Title {0, 1}\n";
+    print { $MYFILE } "\@attribute l1Abbrev {0, 1}\n";
+    print { $MYFILE } "\@attribute l1SentInt {0, 1}\n";
+    print { $MYFILE } "\@attribute l1Time {0, 1}\n";
+    
+    print { $MYFILE } "\@attribute lLength numeric\n";
+    print { $MYFILE } "\@attribute rLength numeric\n";
+    print { $MYFILE } "\@attribute Nspaces numeric\n";
 
-    print { $MYFILE } "\@ATTRIBUTE r1Semi {0, 1}\n";
-
-    print { $MYFILE } "\@ATTRIBUTE l1Internal {0, 1}\n";
-
-    print { $MYFILE } "\@ATTRIBUTE l1Cap {0, 1}\n";
-
-    print { $MYFILE } "\@ATTRIBUTE class {EOS, NEOS}\n";
-    print { $MYFILE } "\@DATA\n";
+    print { $MYFILE } "\@attribute class {EOS, NEOS}\n";
+    print { $MYFILE } "\@data\n";
 }
  
 ##########################################################
