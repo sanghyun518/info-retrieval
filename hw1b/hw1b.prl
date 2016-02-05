@@ -1,0 +1,410 @@
+#!/usr/local/bin/perl -w
+
+use strict;
+
+############################################################
+##
+##  hw1b.prl < segment.data.train
+## 
+############################################################
+
+my @test_lines = ( );    # the current line that we are testing
+my @real_lines = ( );    # the correct classification for the current line
+my $numb_lines = 0;      # the number of lines in the block that we testing
+
+my $correct   = 0;       # number of correct classifications
+my $incorrect = 0;       # number of incorrect classifications
+my $line      = undef;
+
+
+while (defined ($line = <STDIN>)) {
+    chomp $line;
+
+    if ($line =~ /^#BLANK#/) {
+	&process_segment if $numb_lines;     # if we are at a blank line then
+                                             # it is time to process the pre-
+                                             # vious block
+	print $line, "\n";
+
+	@test_lines  = ( );   # make sure that we clear memory here or else
+	@real_lines  = ( );   #  these arrays may hold old data which will
+	$numb_lines  = 0;     #  screw up calculations of their length
+    }
+    else {
+
+	($test_lines[ $numb_lines ]) = ($line =~ m/^[^\t]+\t(.*)/);
+	($real_lines[ $numb_lines ]) = ($line =~ m/^([^\t]+)\t/  );
+
+	$numb_lines += 1;
+    }
+}
+
+my $correct_percentage = ($correct/($correct+$incorrect)) * 100;
+my $incorrect_percentage = 100 - $correct_percentage;
+
+printf("### HW1B schoi60 - OVERALL CORRECT: %u = %.1f%%    INCORRECT: %u = %.1f%%\n", 
+	$correct, $correct_percentage, $incorrect, $incorrect_percentage);
+
+############################################################
+## Process segments by applying specialized detectors/
+## classifiers to the array of the text lines in the segment 
+############################################################
+
+sub process_segment {
+	if (&head_detector) {
+    	label("NNHEAD");
+    } elsif (&quoted_detector) {
+    	label("QUOTED");
+    } elsif (&table_detector) {
+    	label("TABLE");
+    } elsif (&item_detector) {
+    	label("ITEM");
+    } elsif (&sig_detector) {
+    	label("SIG");
+    } elsif (&graphic_detector) {
+    	label("GRAPHIC");
+    } elsif (&headline_detector) {
+    	label("HEADL");
+    } elsif (&address_detector) {
+    	label("ADDRESS");
+    } else {
+    	label("PTEXT");
+    }
+    
+}
+
+sub label {
+	my $cnt;
+	my $label = shift;
+	for ($cnt = 0; $cnt < scalar @test_lines; $cnt++) {
+		&ret($real_lines[$cnt], $label, $test_lines[$cnt] );
+    }
+}
+
+############################################################
+## 'NNHEAD' detector
+############################################################
+
+sub head_detector {
+	
+	my $score  = 0;
+    my $threshold = 10;   
+    my $cnt;
+    
+    # Assume header if multiple lines start with these keywords.
+    # Indeed, with this form of regular expression, the logic 
+    # is vulnerable to cases where only one keyword is repeated
+    # more than 10 times but these cases are highly unlikely. 
+    my $head_pattern = "^From:|^Article:|^Path:|^Newsgroups:|
+    	^Subject:|^Date:|^Organization:|^Lines:|^Approved:|^Message-ID:|
+    	^References:|^NNTP-Posting-Host:";
+    
+    for ($cnt = 0; $cnt < scalar @test_lines; $cnt++) {
+    	if ($test_lines[$cnt] =~ /$head_pattern/) {
+    		$score++;
+    	}
+    }
+    
+    return $score >= $threshold;
+}
+
+
+############################################################
+## 'QUOTED' detector
+############################################################
+
+sub quoted_detector {
+
+    my $score  = 0;
+    my $weight = 0.75;   
+    my $cnt;
+
+    my $quote1 = ">";
+    my $quote2 = ":";
+    my $quote3 = "\\s*\\S*\\s*>";
+    my $quote4 = "@";
+
+    my $block_quote1 = "$quote1|$quote2|$quote3|$quote4";
+    my $block_quote2 = "$quote1|$quote2";
+
+    # the below regex will grab strings of the form
+    #
+    #   ">  some quote ... "
+    #   ":  some quote ... "
+    #   "|> some quote ... "
+    #
+    # as well as regex's of the form
+    #
+    #   ": > some quote ... "
+    #   ">>> some quote ... "
+    #   etc. ...
+
+    my $test_quote1  = "^($block_quote1)(\\s*($block_quote2))*";
+    my $test_quote2  = "^.+(wrote|writes|said|post):";
+    
+    for ($cnt = 0; $cnt < scalar @test_lines; $cnt++) {
+
+	if ( $test_lines[$cnt] =~ /$test_quote1/ ||
+	     $test_lines[$cnt] =~ /$test_quote2/ ) {
+
+	    $score++;
+	}
+    }
+
+    return (($score / (scalar @test_lines)) > $weight);
+}
+
+############################################################
+## 'SIG' detector
+############################################################
+
+sub sig_detector {
+	
+	if ($test_lines[0] =~ "^--\\s*") {
+		# If first line starts with "--" only
+		return 1;
+	} elsif (scalar @test_lines == 1 && $test_lines[0] =~ "\\s*[\\S]+\\s*") {
+		# Single line with single word
+		return 1;
+	} else {
+		if (scalar @test_lines <= 10) {
+			# Assumes there are no 'SIG's that exceed 10 lines
+			
+			my $score  = 0;
+			my $threshold = 10;   
+    		my $cnt;
+    		
+    		my $normal_char = "[a-zA-Z0-9\\s]+";
+    		
+    		my $contiguous_special_chars = 0;
+    	
+    		for ($cnt = 0; $cnt < scalar @test_lines; $cnt++) {
+    			$contiguous_special_chars = 0;
+    			my @chars = split(//,$test_lines[$cnt]);
+    			foreach my $c (@chars) {
+    				# Check if there is contiguous sequence of special characters
+    				if ($c =~ "$normal_char") {
+    					$contiguous_special_chars = 0;
+    				} else {
+    					$contiguous_special_chars++;
+    				}
+    				
+    				if ($contiguous_special_chars > 5) {
+    					return 1;
+    				}
+    			}
+    		}
+		} else {
+			return 0;
+		}
+    }
+}
+
+############################################################
+## 'TABLE' detector
+############################################################
+
+sub table_detector {
+	if (scalar @test_lines > 2) {
+		# There should be at least two lines
+		
+		my $score  = 0;
+		my $prev_word_count = -1;
+		my $cnt;
+		
+		# Check if there are more than two lines with "more or less" same number of words
+    	for ($cnt = 0; $cnt < scalar @test_lines; $cnt++) {
+    		my @words = split(' ', $test_lines[$cnt]);
+    		my $word_count = scalar @words;
+    		
+    		if ($prev_word_count == -1) {
+    			$prev_word_count = scalar $word_count;
+    		} else {
+    			if ($prev_word_count - 1 < $word_count && $word_count < $prev_word_count + 1) {
+    				$score++;
+    			} else {
+    				$score = 0;
+    				$prev_word_count = -1;
+    			}
+    		}
+    		
+    		if ($score > 2) {
+    			# There are more than two lines -> table
+    			return 1;
+    		}
+    	}
+    
+    	return 0;
+	} else {
+		# Otherwise it's unlikely
+		
+		return 0;
+	}
+}
+
+############################################################
+## 'GRAPHIC' detector
+############################################################
+
+sub graphic_detector {
+	my $letter_count  = 0;
+	my $non_letter_count = 0;
+	my $cnt;
+	
+	my $normal_char = "[a-zA-Z]+";
+		
+	# Compare the density of letters and non-letters.
+	# Since 'GRAPHIC' is checked after checking most
+	# of other criteria, this seemingly simple density
+	# comparison is enough to ensure robustness.
+    for ($cnt = 0; $cnt < scalar @test_lines; $cnt++) {
+    	my @chars = split(//,$test_lines[$cnt]);
+    	foreach my $c (@chars) {
+    		# Check if there is contiguous sequence of special characters
+    		if ($c =~ "$normal_char") {
+    			$letter_count++;
+    		} else {
+    			$non_letter_count++;
+    		}
+    	}
+    }
+    
+    return ($non_letter_count / $letter_count) > 2 ? 1 : 0;
+}
+
+############################################################
+## 'HEADL' detector
+############################################################
+
+sub headline_detector {
+	my $cnt;
+	my $num_white_lines = 0;
+	my $num_cap_words = 0;
+	my $num_words = 0;
+	my $upper_case = "^[0-9A-Z]";
+	my $white_space = "^[\\s]{5,1000}.*";
+	
+	for ($cnt = 0; $cnt < scalar @test_lines; $cnt++) {
+		
+		# Check how many lines start with a "large" white space.
+		if ($test_lines[$cnt] =~ "$white_space") {
+			$num_white_lines++;
+		}
+		
+		# Check if there is a period mark.
+		# If there is, immediate return false.
+    	my @chars = split(//,$test_lines[$cnt]);
+    	foreach my $c (@chars) {
+    		if ($c eq ".") {
+    			return 0;
+    		}
+    	}
+    	
+    	# Count how many words start in upper case or digit
+    	my @words = split(' ',$test_lines[$cnt]);
+    	foreach my $word (@words) {
+    		if ($word =~ "/$upper_case/") {
+    			$num_cap_words++;
+    		}
+    		$num_words++;
+    	}
+	}
+	
+	if (($num_cap_words / $num_words) > 0.5) {
+		# If more than half of the words start in upper case...
+		return 1;
+	} else {
+		if (scalar @test_lines == $num_white_lines) {
+			# If every line starts with a large white space...
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+}
+
+############################################################
+## 'ADDRESS' detector
+############################################################
+
+sub address_detector {
+	if (scalar @test_lines < 2) {
+		return 0;
+	}
+	
+	my $cnt;
+	
+	my $prev_white_spaces = -1;
+	
+	for ($cnt = 0; $cnt < scalar @test_lines; $cnt++) {
+    	my @chars = split(//,$test_lines[$cnt]);
+    	my $num_white_spaces = 0;
+    	my $num_letters = 0;
+    	
+    	foreach my $c (@chars) {
+    		if ($c =~ "\\s" && $num_letters == 0) {
+    			$num_white_spaces++;
+    		} else {
+    			$num_letters++;
+    		}
+    	}
+    	
+    	if ($num_letters == 0 || $num_letters > 100 || $num_white_spaces == 0) {
+    		return 0;
+    	}
+    	
+    	if ($prev_white_spaces == -1) {
+    		$prev_white_spaces = $num_white_spaces;
+    	} else {
+    		if ($prev_white_spaces != $num_white_spaces) {
+    			return 0;
+    		}
+    	}
+    }
+    
+    return 1;
+}
+
+############################################################
+## 'ITEM' detector
+############################################################
+
+sub item_detector {
+	my $cnt;
+	
+	my $item_pattern = "\\t+(\\([0-9]+\\)|[0-9]+\\.|[0-9]+\\)|-)\\s+.*";
+	
+	for ($cnt = 0; $cnt < scalar @test_lines; $cnt++) {
+		if ($test_lines[$cnt] =~ "$item_pattern") {
+			return 1;
+		}
+    }
+    
+    return 0;
+}
+
+############################################################
+## RET - prints full line for errors and keeps score $rule
+##     - indicates the rule number responsible for the 
+##     - classification
+##
+##  This is a useful debugging tool, as after each change in
+##  the program one can identify the remaining misclassified
+##  training examples and the patterns responsible for them. 
+############################################################
+ 
+sub ret {
+
+    my $trueclass  = shift;   # what is the true sentence class ('NEOS','EOS')
+    my $givenclass = shift;   # what is the sentence class my rule gives
+    my $line       = shift;   # the actual line tested
+
+    if ($trueclass eq $givenclass) {
+    	$correct++;
+    } else {
+    	$incorrect++;
+    }
+    
+    print $givenclass, " ", $line;
+}
+
