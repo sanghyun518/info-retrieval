@@ -75,24 +75,24 @@ while (<>) {
     my $logistic_value = 0.0;
     
     # Perform dot-product with coeffcients
-    $logistic_value += (7.2115 * $feature_vector[0]);
-    $logistic_value += (-3.2753 * $feature_vector[1]);
-    $logistic_value += (2.2672 * $feature_vector[2]);
-    $logistic_value += (-2.9189 * $feature_vector[3]);
-    $logistic_value += (-6.7567 * $feature_vector[4]);
-    $logistic_value += (-5.4091 * $feature_vector[5]);
-    $logistic_value += (-4.24 * $feature_vector[6]);
-    $logistic_value += (-5.8588 * $feature_vector[7]);
-    $logistic_value += (1881.8571 * $feature_vector[8]);
-    $logistic_value += (0.0012 * $feature_vector[9]);
-    $logistic_value += (-0.0004 * $feature_vector[10]);
-    $logistic_value += (2.1213 * $feature_vector[11]);
+    $logistic_value += (7.2115 		* $feature_vector[0]);
+    $logistic_value += (-3.2753 	* $feature_vector[1]);
+    $logistic_value += (2.2672 		* $feature_vector[2]);
+    $logistic_value += (-2.9189 	* $feature_vector[3]);
+    $logistic_value += (-6.7567 	* $feature_vector[4]);
+    $logistic_value += (-5.4091 	* $feature_vector[5]);
+    $logistic_value += (-4.24 		* $feature_vector[6]);
+    $logistic_value += (-5.8588 	* $feature_vector[7]);
+    $logistic_value += (1881.8571 	* $feature_vector[8]);
+    $logistic_value += (0.0012 		* $feature_vector[9]);
+    $logistic_value += (-0.0004 	* $feature_vector[10]);
+    $logistic_value += (2.1213 		* $feature_vector[11]);
     
     # Add intercept value
     $logistic_value += 1.4238;
     
     my $class = $feature_vector[12];
-    my $line = $feature_vector[13];
+    my $line = 	$feature_vector[13];
     
     $probability = 1 / (1 + exp(-$logistic_value));
     
