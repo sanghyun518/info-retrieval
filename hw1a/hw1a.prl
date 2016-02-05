@@ -94,8 +94,10 @@ while (<>) {
     my $class = $feature_vector[12];
     my $line = $feature_vector[13];
     
+    $probability = 1 / (1 + exp(-$logistic_value));
+    
     # Classify according to probability
-    if ($logistic_value > 0.5) {
+    if ($probability > 0.5) {
     	&ret($class,'EOS',$line);
     } else {
     	&ret($class,'NEOS',$line);
