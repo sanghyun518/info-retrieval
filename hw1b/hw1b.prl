@@ -16,6 +16,10 @@ my $correct   = 0;       # number of correct classifications
 my $incorrect = 0;       # number of incorrect classifications
 my $line      = undef;
 
+my $current_rule;		# name of rule applied
+my %correct_rules; 		# number of correct classifications for each rule
+my %incorrect_rules; 	# number of correct classifications for each rule
+my %count_rules;		# numer of times each rule have been used
 
 while (defined ($line = <STDIN>)) {
     chomp $line;
@@ -39,6 +43,62 @@ while (defined ($line = <STDIN>)) {
     }
 }
 
+## Rule utilization report
+
+print "-------------------------------------------------------------------------\n\n";
+print "Rule Utilization:\n\n";
+
+my $num_total_count = 0;
+
+for my $rule (keys %count_rules) {
+	my $count = 0;
+	
+	if (exists $count_rules{$rule}) {
+		$count = $count_rules{$rule};
+	}
+	
+	$num_total_count += $count;
+};
+
+for my $rule (keys %count_rules) {
+	my $count = 0;
+	
+	if (exists $count_rules{$rule}) {
+		$count = $count_rules{$rule};
+	}
+	
+	
+	if ($num_total_count > 0) {
+		printf("%-15s\t%u = %.1f%%\n", $rule, $count, ($count/$num_total_count)*100);
+	}
+};
+
+## Rule effectiveness report
+
+print "\n-------------------------------------------------------------------------\n\n";
+print "Rule Effectiveness:\n\n";
+
+for my $rule (keys %correct_rules) {
+	my $num_correct = 0;
+	my $num_incorrect = 0;
+	
+	if (exists $correct_rules{$rule}) {
+		$num_correct = $correct_rules{$rule};
+	}
+	if (exists $incorrect_rules{$rule}) {
+		$num_incorrect = $incorrect_rules{$rule};
+	}
+	
+	my $total = $num_correct + $num_incorrect;
+	
+	if ($total > 0) {
+		printf("%-15s\tCORRECT: %u = %.1f%%\tINCORRECT: %u = %.1f%%\n", $rule, 
+			$num_correct, ($num_correct/$total)*100, $num_incorrect, ($num_incorrect/$total)*100)
+	}
+};
+
+print "\n-------------------------------------------------------------------------\n\n";
+
 my $correct_percentage = ($correct/($correct+$incorrect)) * 100;
 my $incorrect_percentage = 100 - $correct_percentage;
 
@@ -51,6 +111,8 @@ printf("### HW1B schoi60 - OVERALL CORRECT: %u = %.1f%%    INCORRECT: %u = %.1f%
 ############################################################
 
 sub process_segment {
+	$current_rule = "";
+	
 	if (&head_detector) {
     	label("NNHEAD");
     } elsif (&quoted_detector) {
@@ -65,9 +127,8 @@ sub process_segment {
     	label("GRAPHIC");
     } elsif (&headline_detector) {
     	label("HEADL");
-    } elsif (&address_detector) {
-    	label("ADDRESS");
     } else {
+    	$current_rule = "PTEXT";
     	label("PTEXT");
     }
     
@@ -104,6 +165,10 @@ sub head_detector {
     		$score++;
     	}
     }
+    
+    $current_rule = "NNHEAD_1";
+    
+    count_rule();
     
     return $score >= $threshold;
 }
@@ -143,13 +208,13 @@ sub quoted_detector {
     my $test_quote2  = "^.+(wrote|writes|said|post):";
     
     for ($cnt = 0; $cnt < scalar @test_lines; $cnt++) {
-
-	if ( $test_lines[$cnt] =~ /$test_quote1/ ||
-	     $test_lines[$cnt] =~ /$test_quote2/ ) {
-
-	    $score++;
-	}
+    	if ($test_lines[$cnt] =~ /$test_quote1/ || $test_lines[$cnt] =~ /$test_quote2/) {
+    		$score++;
+    	}
     }
+    
+    $current_rule = "QUOTED_1";
+   	count_rule();
 
     return (($score / (scalar @test_lines)) > $weight);
 }
@@ -161,12 +226,13 @@ sub quoted_detector {
 sub sig_detector {
 	
 	if ($test_lines[0] =~ "^--\\s*") {
+		$current_rule = "SIG_1";
+		count_rule();
 		# If first line starts with "--" only
 		return 1;
-	} elsif (scalar @test_lines == 1 && $test_lines[0] =~ "\\s*[\\S]+\\s*") {
-		# Single line with single word
-		return 1;
 	} else {
+		$current_rule = "SIG_2";
+		count_rule();
 		if (scalar @test_lines <= 10) {
 			# Assumes there are no 'SIG's that exceed 10 lines
 			
@@ -189,11 +255,13 @@ sub sig_detector {
     					$contiguous_special_chars++;
     				}
     				
-    				if ($contiguous_special_chars > 5) {
+    				if ($contiguous_special_chars > 10) {
     					return 1;
     				}
     			}
     		}
+    		
+    		return 0;
 		} else {
 			return 0;
 		}
@@ -206,6 +274,9 @@ sub sig_detector {
 
 sub table_detector {
 	if (scalar @test_lines > 2) {
+		$current_rule = "TABLE_1";
+		count_rule();
+		
 		# There should be at least two lines
 		
 		my $score  = 0;
@@ -237,7 +308,8 @@ sub table_detector {
     	return 0;
 	} else {
 		# Otherwise it's unlikely
-		
+		$current_rule = "TABLE_2";
+		count_rule();
 		return 0;
 	}
 }
@@ -251,7 +323,7 @@ sub graphic_detector {
 	my $non_letter_count = 0;
 	my $cnt;
 	
-	my $normal_char = "[a-zA-Z]+";
+	my $normal_char = "[a-zA-Z0-9]";
 		
 	# Compare the density of letters and non-letters.
 	# Since 'GRAPHIC' is checked after checking most
@@ -269,7 +341,10 @@ sub graphic_detector {
     	}
     }
     
-    return ($non_letter_count / $letter_count) > 2 ? 1 : 0;
+    $current_rule = "GRAPHIC_1";
+    count_rule();
+    
+    return ($non_letter_count / $letter_count) > 3 ? 1 : 0;
 }
 
 ############################################################
@@ -296,6 +371,8 @@ sub headline_detector {
     	my @chars = split(//,$test_lines[$cnt]);
     	foreach my $c (@chars) {
     		if ($c eq ".") {
+    			$current_rule = "HEADL_1";
+    			count_rule();
     			return 0;
     		}
     	}
@@ -312,8 +389,12 @@ sub headline_detector {
 	
 	if (($num_cap_words / $num_words) > 0.5) {
 		# If more than half of the words start in upper case...
+		$current_rule = "HEADL_2";
+		count_rule();
 		return 1;
 	} else {
+		$current_rule = "HEADL_3";
+		count_rule();
 		if (scalar @test_lines == $num_white_lines) {
 			# If every line starts with a large white space...
 			return 1;
@@ -324,53 +405,14 @@ sub headline_detector {
 }
 
 ############################################################
-## 'ADDRESS' detector
-############################################################
-
-sub address_detector {
-	if (scalar @test_lines < 2) {
-		return 0;
-	}
-	
-	my $cnt;
-	
-	my $prev_white_spaces = -1;
-	
-	for ($cnt = 0; $cnt < scalar @test_lines; $cnt++) {
-    	my @chars = split(//,$test_lines[$cnt]);
-    	my $num_white_spaces = 0;
-    	my $num_letters = 0;
-    	
-    	foreach my $c (@chars) {
-    		if ($c =~ "\\s" && $num_letters == 0) {
-    			$num_white_spaces++;
-    		} else {
-    			$num_letters++;
-    		}
-    	}
-    	
-    	if ($num_letters == 0 || $num_letters > 100 || $num_white_spaces == 0) {
-    		return 0;
-    	}
-    	
-    	if ($prev_white_spaces == -1) {
-    		$prev_white_spaces = $num_white_spaces;
-    	} else {
-    		if ($prev_white_spaces != $num_white_spaces) {
-    			return 0;
-    		}
-    	}
-    }
-    
-    return 1;
-}
-
-############################################################
 ## 'ITEM' detector
 ############################################################
 
 sub item_detector {
 	my $cnt;
+	
+	$current_rule = "ITEM_1";
+	count_rule();
 	
 	my $item_pattern = "\\t+(\\([0-9]+\\)|[0-9]+\\.|[0-9]+\\)|-)\\s+.*";
 	
@@ -398,13 +440,36 @@ sub ret {
     my $trueclass  = shift;   # what is the true sentence class ('NEOS','EOS')
     my $givenclass = shift;   # what is the sentence class my rule gives
     my $line       = shift;   # the actual line tested
+    
+    if ($trueclass eq "ADDRESS") {
+    	# According to 'standards' file, we can treat ADDRESS as PTEXT
+    	$trueclass = "PTEXT";
+    }
 
     if ($trueclass eq $givenclass) {
     	$correct++;
+    	if (exists $correct_rules{$current_rule}) {
+    		$correct_rules{$current_rule} = $correct_rules{$current_rule} + 1;
+    	} else {
+    		$correct_rules{$current_rule} = 0;
+    	}
     } else {
     	$incorrect++;
+    	if (exists $incorrect_rules{$current_rule}) {
+    		$incorrect_rules{$current_rule} = $incorrect_rules{$current_rule} + 1;
+    	} else {
+    		$incorrect_rules{$current_rule} = 0;
+    	}
     }
     
     print $givenclass, " ", $line;
+}
+
+sub count_rule {
+	if (exists $count_rules{$current_rule}) {
+    	$count_rules{$current_rule} = $count_rules{$current_rule} + 1;
+    } else {
+    	$count_rules{$current_rule} = 0;
+    }
 }
 
