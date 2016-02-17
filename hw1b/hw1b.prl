@@ -14,7 +14,7 @@ my $numb_lines = 0;     # the number of lines in the block that we testing
 
 my $line = undef;
 
-my $file_name = "train_hw1b.arff";
+my $file_name = "hw1b_weka_file.arff";
 
 unlink($file_name);
 
