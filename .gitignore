@@ -20,4 +20,5 @@ nytprof.out
 /_eumm/
 *.jar
 *.project
+*.arff
 

@@ -50,6 +50,31 @@ while ( defined( $line = <STDIN> ) ) {
 
 close(MYFILE);
 
+##########################################################
+## GET_FEATURE_VECTOR - creates a feature vector to be
+##                      classified by logistic regression
+##
+##  The 14-dimensional feature vector consists of (in the
+##  order of returned values) the following values: 
+##  1. Number  : Score for how likely it is 'NNHEAD'
+##  2. Number  : Score for how likely it is 'QUOTED'
+##  3. Boolean : Current block belongs to 'TABLE'
+##  4. Number  : Score for how likely it is 'ITEM'
+##  5. Boolean : Current block belongs to 'SIG'
+##  6. Number  : Score for how likely it is 'GRAPHIC'
+##  7. Number  : Ratio: # Upper-case words / # Total
+##  8. Boolean : Every line begins with whitespace
+##  9. Number  : Maximum # of repeated special characters
+## 10. Number  : # of period marks
+## 11. Number  : Ratio: # Whitespaces / # Total
+## 12. Boolean : Current block belongs to 'ADDRESS'
+## 13. Boolean : Every line is indented by same length
+## 14. Number  : Score for how likely it is 'PTEXT'
+##
+##  The true class label and full line of data are
+##  returned along with the feature vector.
+##########################################################
+
 sub get_feature_vector() {
 	my $headScore               = &head_detector;
 	my $quoteScore              = &quoted_detector;
@@ -64,7 +89,7 @@ sub get_feature_vector() {
 	my $white_space_ratio       = &white_space_ratio;
 	my $begin_alphabet          = &begin_alphabet;
 	my $address_detector        = &address_detector;
-	my $indentsamelevel         = &indentsamelevel;
+	my $same_indent             = &same_indent;
 	my $text_score              = &text_detector;
 
 	return (
@@ -72,7 +97,7 @@ sub get_feature_vector() {
 		$itemScore,       $sigScore,          $graphicScore,
 		$uppercase_ratio, $begin_whitespace,  $continuous_special_char,
 		$num_periods,     $white_space_ratio, $address_detector,
-		$indentsamelevel, $text_score,        $real_lines[0]
+		$same_indent,     $text_score,        $real_lines[0]
 	);
 }
 
@@ -93,7 +118,7 @@ sub printHeader {
 	print {$MYFILE} "\@attribute num_periods numeric\n";
 	print {$MYFILE} "\@attribute white_space_ratio numeric\n";
 	print {$MYFILE} "\@attribute address_detector {0, 1}\n";
-	print {$MYFILE} "\@attribute indentsamelevel {0, 1}\n";
+	print {$MYFILE} "\@attribute same_indent {0, 1}\n";
 	print {$MYFILE} "\@attribute text_score numeric\n";
 	print {$MYFILE}
 "\@attribute class {NNHEAD, QUOTED, TABLE, ITEM, SIG, GRAPHIC, HEADL, ADDRESS, PTEXT}\n";
@@ -221,6 +246,10 @@ sub sig_detector {
 	}
 }
 
+############################################################
+## Returns the maximum number of repeated special characters
+############################################################
+
 sub continuous_special_char {
 	my $cnt;
 
@@ -326,7 +355,8 @@ sub graphic_detector {
 }
 
 ############################################################
-## 'HEADL' detector
+## Ratio between number of words that start with upper case
+## and total number of words
 ############################################################
 
 sub uppercase_ratio {
@@ -349,6 +379,10 @@ sub uppercase_ratio {
 
 	return $num_cap_words / $num_words;
 }
+
+############################################################
+## Checks whether every line begins with a whitespace
+############################################################
 
 sub begin_whitespace {
 	my $cnt;
@@ -373,6 +407,10 @@ sub begin_whitespace {
 		return 0;
 	}
 }
+
+############################################################
+## Counts the number of period marks
+############################################################
 
 sub num_periods {
 	my $cnt;
@@ -408,30 +446,35 @@ sub item_detector {
 	return ( $score / scalar @test_lines >= $weight_score ) ? 1 : 0;
 }
 
-sub indentsamelevel {
-	my @spacelen    = ();
-	my $equalspaces = 1;
+############################################################
+## Checks whether every line is indented by same number
+############################################################
+
+sub same_indent {
+	my @num_spaces  = ();
+	my $equal_spaces = 1;
 	for ( my $cnt = 0 ; $cnt < scalar @test_lines ; $cnt++ ) {
-		$spacelen[ $#spacelen + 1 ] = &leadingspace( $test_lines[$cnt] );
+		$num_spaces[ $#num_spaces + 1 ] = &indentation_length( $test_lines[$cnt] );
 	}
-	for ( my $i = 0 ; $i < ( scalar @spacelen ) - 1 ; $i++ ) {
-		if ( $spacelen[$i] != $spacelen[ $i + 1 ] ) {
-			$equalspaces = 0;
+	for ( my $i = 0 ; $i < ( scalar @num_spaces ) - 1 ; $i++ ) {
+		if ( $num_spaces[$i] != $num_spaces[ $i + 1 ] ) {
+			$equal_spaces = 0;
 		}
 	}
-	return $equalspaces;
+	return $equal_spaces;
 }
 
-sub leadingspace {
-	my $str;
-	if ( $_[0] =~ /(^\s+)/ ) {
-		$str = $1;
-	}
-	else {
-		$str = "";
-	}
-	return length($str);
+############################################################
+## Returns indentation length
+############################################################
+
+sub indentation_length {
+	return length($_[0] =~ /(^\s+)/ ? $1 : "");
 }
+
+############################################################
+## Ratio between number of whitespaces and non-whitespaces
+############################################################
 
 sub white_space_ratio {
 	my $cnt;
@@ -451,6 +494,11 @@ sub white_space_ratio {
 	return $num_white_space / $num_chars;
 }
 
+############################################################
+## Ratio between number of lines that start with an
+## alphabet and those that do not
+############################################################
+
 sub begin_alphabet {
 	my $cnt;
 
@@ -466,6 +514,10 @@ sub begin_alphabet {
 
 	return $counter / scalar @test_lines;
 }
+
+############################################################
+## 'ADDRESS' detector
+############################################################
 
 sub address_detector {
 	my $cnt;
@@ -484,6 +536,10 @@ sub address_detector {
 
 	return 0;
 }
+
+############################################################
+## 'PTEXT' detector
+############################################################
 
 sub text_detector {
 	if (&quoted_detector || &item_detector) {
