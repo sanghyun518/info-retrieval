@@ -23,5 +23,13 @@ Please use Weka as following:
 Correctly classified instances: 93.3266% (923 blocks)
 Incorrectly classified instances: 6.6734% (66 blocks)
 
+---------------------------------------------------------------------------
+
+Logistic classifier was chosen because it showed the best compromise between
+overfitting and accuracy. Decision trees showed the highest performance on
+training data itself (around 98%) but these classifiers literally memorized
+the training data. That is, once the training data was split, the decision trees
+performed very poorly on test data. Other classifiers didn't do very well at all.
+
 
 
