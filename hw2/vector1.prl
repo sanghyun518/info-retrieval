@@ -914,9 +914,9 @@ sub comp_recall {
 
     my $prec_mean1 = ($precisions{25} + $precisions{50} + $precisions{75}) / 3;
     my $prec_mean2 = (eval join '+', (map {$precisions{int(100 * ($_ / 10))}} (1..10))) / 10;
+    my $prec_norm = 1 - ((eval join '+', (map {log($_)} @doc_rank)) - (eval join '+', (map {log($_)} (1..$tot_rel)))) /
+    	($tot_number * log($tot_number) - ($tot_number - $tot_rel) * log($tot_number - $tot_rel) - $tot_rel * log($tot_rel));
     my $recall_norm = 1 - ((eval join '+', @doc_rank) - (eval join '+', (1..$tot_rel))) / ($tot_rel * ($tot_number - $tot_rel));
-    my $prec_norm = $tot_number * log($tot_number) - ($tot_number - $tot_rel) * log($tot_number - $tot_rel) - $tot_rel * log($tot_rel);
-    $prec_norm = 1 - ((eval join '+', (map {log($_)} @doc_rank)) - (eval join '+', (map {log($_)} (1..$tot_rel)))) / $prec_norm;
     
     return ($precisions{25}, $precisions{50}, $precisions{75}, $precisions{100}, $prec_mean1, $prec_mean2, $prec_norm, $recall_norm);
 }
