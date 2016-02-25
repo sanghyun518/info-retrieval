@@ -836,7 +836,89 @@ EndOfList
 ##########################################################
 
 sub comp_recall {
-    print "To be implemented\n";
+	# Initialize arguments
+	
+	my $rel_hash = shift;
+    my $qvn = shift;
+    
+    # Make list of ranks for relevant documents
+    
+    my @doc_rank = ();
+    my $tot_number = (scalar @doc_vector) - 1;
+    
+    my $index = 0;
+
+    for $index (0 .. $tot_number) {
+    	# document number in rank order
+		my $ind = $res_vector[$index];
+
+        # check whether this document is relevant
+		if (defined($ind) && $rel_hash->{ $ind }) {
+	    	push @doc_rank, $index + 1;
+		}
+    }
+    
+    # Compute recall/precision pairs
+    
+    my @recall_level = (); # desired recall levels
+    
+    for $index (1 .. 9) {
+    	push @recall_level, int(100 * ($index / 10));
+    }
+    
+    push @recall_level, 25;
+    push @recall_level, 75;
+    
+    @recall_level = sort { $a <=> $b } @recall_level;
+    
+    my %precisions; # precisions for various recall levels
+
+    my $tot_rel = scalar @doc_rank;
+    my $curr_recall_level = -1;
+    my $next_recall_level = -1;
+    my $curr_prec_level = -1;
+    my $next_prec_level = -1;
+    
+    $precisions{100} = $tot_rel / $doc_rank[$tot_rel - 1];
+
+    for $index (0 .. ($tot_rel - 1)) {
+        $curr_recall_level = $index / $tot_rel;
+        $next_recall_level = ($index + 1) / $tot_rel;
+        $curr_prec_level = $index == 0 ? 0 : $index / $doc_rank[$index - 1];
+        $next_prec_level = ($index + 1) / $doc_rank[$index];
+        
+        my $idx = 0;
+        
+        my $recall_level = $recall_level[$idx] / 100;
+        
+        while ($curr_recall_level <= $recall_level && $recall_level < $next_recall_level) {
+        	# Perform interpolation for precision
+        	$precisions{$recall_level[$idx]} = ($recall_level - $curr_recall_level) / ($next_recall_level - $curr_recall_level) 
+        		* ($next_prec_level - $curr_prec_level) + $curr_prec_level;
+        	
+        	if (++$idx == scalar @recall_level) {
+    			last;
+    		}
+    		
+        	$recall_level = $recall_level[$idx] / 100;
+        }
+        
+        if ($idx > 0) {
+        	splice @recall_level, 0, $idx;
+        	
+        	if (scalar @recall_level == 0) {
+    			last;
+    		}
+        }
+    }
+
+    my $prec_mean1 = ($precisions{25} + $precisions{50} + $precisions{75}) / 3;
+    my $prec_mean2 = (eval join '+', (map {$precisions{int(100 * ($_ / 10))}} (1..10))) / 10;
+    my $recall_norm = 1 - ((eval join '+', @doc_rank) - (eval join '+', (1..$tot_rel))) / ($tot_rel * ($tot_number - $tot_rel));
+    my $prec_norm = $tot_number * log($tot_number) - ($tot_number - $tot_rel) * log($tot_number - $tot_rel) - $tot_rel * log($tot_rel);
+    $prec_norm = 1 - ((eval join '+', (map {log($_)} @doc_rank)) - (eval join '+', (map {log($_)} (1..$tot_rel)))) / $prec_norm;
+    
+    return ($precisions{25}, $precisions{50}, $precisions{75}, $precisions{100}, $prec_mean1, $prec_mean2, $prec_norm, $recall_norm);
 }
 
 ##########################################################
