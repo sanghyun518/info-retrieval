@@ -31,7 +31,7 @@ use FileHandle;
 ## Program Defaults and Global Variables
 ############################################################
 
-my $DIR  = "/home/1/yarowsky/cs466/hw2";
+my $DIR  = ".";
 my $HOME = ".";
 
 my $token_docs = "$DIR/cacm";           # tokenized cacm journals
@@ -286,11 +286,26 @@ sub init_corp_freq {
 ##########################################################
 
 sub init_doc_vectors {
+	my $mode = shift;
 
-    my $TITLE_BASE_WEIGHT = 4;     # weight given a title token
-    my $KEYWD_BASE_WEIGHT = 3;     # weight given a key word token
+    my $TITLE_BASE_WEIGHT = 3;     # weight given a title token
+    my $KEYWD_BASE_WEIGHT = 4;     # weight given a key word token
     my $ABSTR_BASE_WEIGHT = 1;     # weight given an abstract word token
-    my $AUTHR_BASE_WEIGHT = 4;     # weight given an an author token
+    my $AUTHR_BASE_WEIGHT = 3;     # weight given an an author token
+    
+    if ($mode == 51) {
+    	$TITLE_BASE_WEIGHT = 1;
+    	$KEYWD_BASE_WEIGHT = 1;
+    	$ABSTR_BASE_WEIGHT = 1;
+    	$AUTHR_BASE_WEIGHT = 1;
+    } else {
+    	if ($mode == 53) {
+    		$TITLE_BASE_WEIGHT = 1;
+    		$KEYWD_BASE_WEIGHT = 1;
+    		$ABSTR_BASE_WEIGHT = 4;
+    		$AUTHR_BASE_WEIGHT = 1;
+    	}
+    }
 
     my $token_docs_fh = new FileHandle $token_docs, "r"
 	or croak "Failed $token_docs";
@@ -322,7 +337,7 @@ sub init_doc_vectors {
 	$tweight = $ABSTR_BASE_WEIGHT and next if $word =~ /^\.W/;
 	$tweight = $AUTHR_BASE_WEIGHT and next if $word =~ /^\.A/;
 
-	if ($word =~ /[a-zA-Z]/ and ! exists $stoplist_hash{ $word }) {
+	if (($word =~ /[\S]/ and $mode == 42) || ($word =~ /[a-zA-Z]/ and ! exists $stoplist_hash{ $word })) {
 
 #	    print $word, "\n";
 #	    print $docs_freq_hash{ $word }, "\n";
@@ -330,8 +345,11 @@ sub init_doc_vectors {
 	    if (defined( $docs_freq_hash{ $word } )) {
 
 #		print $word, "\n";
-
-		$doc_vector[$doc_num]{ $word } += $tweight;
+        if ($mode == 13) {
+        	$doc_vector[$doc_num]{ $word } = 1;
+        } else {
+    		$doc_vector[$doc_num]{ $word } += $tweight;    	
+        }
 	    }
 	    else {
 		print "ERROR: Document frequency of zero: ", $word, "\n";
@@ -339,13 +357,13 @@ sub init_doc_vectors {
 	}
     }
 
-    # optionally normalize the raw term frequency
-    #
-    # foreach my $hash (@doc_vector) {
-    #	  foreach my $key (keys %{ $hash }) {
-    #         $hash{ $key } = log( $doc_num / $docs_freq_hash{ $key });
-    #     }
-    # }
+    if ($mode != 11 && $mode != 13) {
+    	foreach my $hash (@doc_vector) {
+    		foreach my $key (keys %{ $hash }) {
+    			$hash->{ $key } *= log( $doc_num / $docs_freq_hash{ $key });
+    		}
+    	}
+    }
 
     return $doc_num;
 }
@@ -360,6 +378,7 @@ sub init_doc_vectors {
 ##########################################################
 
 sub init_qry_vectors {
+	my $mode = shift;
 
     my $QUERY_BASE_WEIGHT = 2;
     my $QUERY_AUTH_WEIGHT = 2;
@@ -390,24 +409,28 @@ sub init_qry_vectors {
 	$tweight = $QUERY_BASE_WEIGHT and next if $word =~ /^\.W/;
 	$tweight = $QUERY_AUTH_WEIGHT and next if $word =~ /^\.A/;
 
-	if ($word =~ /[a-zA-Z]/ && ! exists $stoplist_hash{ $word }) {
+	if (($word =~ /[\S]/ and $mode == 42) || ($word =~ /[a-zA-Z]/ && ! exists $stoplist_hash{ $word })) {
 
 	    if (! exists $docs_freq_hash{ $word }) {
 		print "ERROR: Document frequency of zero: ", $word, "\n";
 	    }
 	    else {
-		$qry_vector[$qry_num]{ $word } += $tweight;
+	    	if ($mode == 13) {
+	    		$qry_vector[$qry_num]{ $word } = 1;
+        	} else {
+    			$qry_vector[$qry_num]{ $word } += $tweight;    	
+        	}
 	    }
 	}
     }
-
-    # optionally normalize the raw term frequency
-    #
-    # foreach my $hash (@qry_vector) {
-    #	  foreach my $key (keys %{ $hash }) {
-    #         $hash{ $key } = log( $qry_num / $docs_freq_hash{ $key });
-    #     }
-    # }
+    
+    if ($mode != 11 && $mode != 13) {
+    	foreach my $hash (@qry_vector) {
+    		foreach my $key (keys %{ $hash }) {
+    			$hash->{ $key } *= log( $qry_num / $docs_freq_hash{ $key });
+    		}
+    	}
+    }
 
     return $qry_num;
 }
@@ -446,8 +469,8 @@ sub main_loop {
     &init_files ( "unstemmed" );
     &init_corp_freq;
     
-    my $total_docs = &init_doc_vectors;
-    my $total_qrys = &init_qry_vectors;
+    my $total_docs = &init_doc_vectors(0);
+    my $total_qrys = &init_qry_vectors(0);
 
     while (1) {
 
@@ -517,6 +540,7 @@ EndOfMenu
 ##########################################################
 
 sub get_and_show_retrieved_set {
+	my $mode = 0;
 
     print << "EndOfMenu";
 
@@ -565,7 +589,7 @@ EndOfMenu
 
 	print "Document to Document comparison\n";
 	
-	&get_retrieved_set( $doc_vector[$vect_num] );
+	&get_retrieved_set( $doc_vector[$vect_num], $mode );
 	&shw_retrieved_set( $max_show, 
 			    $vect_num, 
 			    $doc_vector[$vect_num],
@@ -578,7 +602,7 @@ EndOfMenu
 	my $int_vector = &set_interact_vec;  # vector created by interactive
                                              #  query
 
-	&get_retrieved_set( $int_vector );
+	&get_retrieved_set( $int_vector, $mode );
 	&shw_retrieved_set( $max_show,
 			    0,
 			    $int_vector,
@@ -588,7 +612,7 @@ EndOfMenu
 
 	print "Query to Document comparison\n";
 
-	&get_retrieved_set( $qry_vector[$vect_num] );
+	&get_retrieved_set( $qry_vector[$vect_num], $mode );
 	&shw_retrieved_set( $max_show,
 			    $vect_num,
 			    $qry_vector[$vect_num],
@@ -668,6 +692,7 @@ sub set_interact_vec {
 sub get_retrieved_set {
 
     my $qry_vector = shift;
+    my $mode       = shift;
     my $tot_number = (scalar @doc_vector) - 1;
     my $index      = 0;
 
@@ -678,7 +703,11 @@ sub get_retrieved_set {
                               # correspond with document values
 
     for $index ( 1 .. $tot_number) {
-	push @doc_simula, &cosine_sim_a( $qry_vector, $doc_vector[$index] );
+    	if ($mode == 22) {
+    		push @doc_simula, &jaccard_sim_a( $qry_vector, $doc_vector[$index] );
+    	} else {
+    		push @doc_simula, &cosine_sim_a( $qry_vector, $doc_vector[$index] );
+    	}
     }
 
     @res_vector = 
@@ -924,8 +953,6 @@ sub comp_recall {
 ##########################################################
 ## SHOW_RELVNT
 ## 
-## UNIMPLEMENTED
-##
 ## This function should take the rank orders and similarity
 ## arrays described in &show_retrieved_set and &comp_recall
 ## and print out only the relevant documents, in an order
@@ -933,7 +960,34 @@ sub comp_recall {
 ##########################################################
 
 sub show_relvnt {
-    print "To be implemented\n";
+	my $rel_hash = shift;
+    my $qvn = shift;
+    my $qvector = shift;
+
+    print << "EndOfList";
+
+    ************************************************************
+	Documents relevant to query number $qvn
+    ************************************************************
+    Similarity   Doc#  Author      Title
+    ==========   ==== ========     =============================
+
+EndOfList
+    ;
+    
+    my $tot_rel = scalar @res_vector;
+    my $index = 0;
+    for $index (0 .. $tot_rel) {
+        my $ind = $res_vector[$index];
+
+        # check whether this document is relevant
+		if (defined($ind) && $rel_hash->{ $ind }) {
+			my ($similarity) = ($doc_simula[$ind]    =~ /^([0-9]+\.\d{0,8})/);
+			my  $title       = substr $titles_vector[$ind], 0, 47;
+            print "  ", $similarity, "   ", $title, "\n";
+        }
+    }
+    print "\n";
 }
 
 
@@ -1027,8 +1081,6 @@ sub do_full_cosine_similarity {
 ########################################################
 ## FULL_COSINE_SIMILARITY
 ## 
-## UNIMPLEMENTED
-## 
 ## This function should compute cosine similarity between
 ## two vectors and display the information that went into
 ## this calculation, useful for debugging purposes.
@@ -1042,7 +1094,59 @@ sub full_cosine_similarity {
     my $qry_indx = shift;
     my $doc_indx = shift;
 
-    print "The rest is up to you . . . \n";
+    print "============================================================\n";
+    printf( "%-15s  %8d   %8d\t%-15s\n", 
+	   "Vector Overlap",
+	   $qry_indx        ,
+	   $doc_indx        ,
+	   "Weight Product"       );
+    print "============================================================\n";
+
+    my $term_one   = undef;
+    my $weight_one = undef;
+    my $term_two   = undef;
+    my $weight_two = undef;
+    
+    my $num = 0;
+    my $sum1 = 0;
+    my $sum2 = 0;
+    my $sum_sq1 = 0;
+    my $sum_sq2 = 0;
+
+    while (($term_one, $weight_one) = each %{ $qry_vect }) {
+    	my $weight_two = $$doc_vect{ $term_one } || 0;
+    	$num += $weight_one * ($$doc_vect{ $term_one } || 0);
+    	$sum1 += $weight_one;
+    	$sum_sq1 += ($weight_one * $weight_one);
+    	
+    	if (exists $$doc_vect{ $term_one }) {
+    		printf( "%-15s  %8d   %8d\t%8d\n"    ,
+		   	$term_one                    ,
+		   	$weight_one                  ,
+		   	$$doc_vect{ $term_one }      ,
+		   	$weight_one * $$doc_vect{ $term_one } );
+    	}
+    }
+    
+    while (($term_two, $weight_two) = each %{ $doc_vect }) {
+    	$sum2 += $weight_two;
+    	$sum_sq2 += ($weight_two * $weight_two);
+    }
+    
+    my $cosine_sim = &cosine_sim_b($num, $sum_sq1, $sum_sq2);
+    my $dice_sim = &dice_sim_b($num, $sum1, $sum2);
+    my $jaccard_sim = &jaccard_sim_b($num, $sum1, $sum2);
+    
+    print "============================================================\n";
+    printf( "%-15s\t%-15s\t%-15s\n", 
+	   "Cosine Sim.",
+	   "Dice Sim.",
+	   "Jaccard Sim."       );
+	printf( "%8d\t%8d\t%8d\n", 
+	   $cosine_sim,
+	   $dice_sim,
+	   $jaccard_sim       );
+    print "============================================================\n";
 }
 
 
@@ -1061,24 +1165,72 @@ sub full_cosine_similarity {
 ##########################################################
 
 sub full_precision_recall_test {
-
-    print "Function is currently unimplemented\n";
-
-    return;
-
-    # Suggestion: if using global variables to store cumulative
-    #             statistics, initialize them here.
-
-#    for my $ind ( 1 .. $tot_queries ) {
-#
-#	&get_retrieved_set( $qry_vector[$ind] );
-#	&comp_recall( $relevance_hash{ $ind }, $ind );
-#
-#	# Suggestion: Collect cumulative statistics here or in
-#	#             global variables set in the above funtion
-#    }
+    print "======================================================================================\n";
+    print "Permutation Name\tP_0.25\tP_0.50\tP_0.75\tP_1.00\tP_mean1\tP_mean2\tP_norm\tR_norm\n";
+    print "======================================================================================\n";
     
-    # Suggestion: Print some sort of summary here.
+    &run_experiment("Raw TF Weight     ", 11);
+    &run_experiment("Boolean Weight    ", 13);
+    &run_experiment("Jaccard Similarity", 22);
+    &run_experiment("Unstemmed Tokens  ", 31);
+    &run_experiment("Include All Tokens", 42);
+    &run_experiment("Equal Weights     ", 51);
+    &run_experiment("Relative Weights  ", 53);
+    &run_experiment("Default Setting   ", 0);
+}
+
+sub run_experiment {
+	my $name = shift;
+	my $mode = shift;
+	
+	$token_docs = "$DIR/cacm";
+	$corps_freq = "$DIR/cacm";
+	$stoplist   = "$DIR/common_words";
+	$titles     = "$DIR/titles.short";
+	$token_qrys = "$DIR/query";
+	$query_freq = "$DIR/query";
+	$token_intr = "$HOME/interactive";
+	$inter_freq = "$HOME/interactive";
+	
+	@doc_vector = ( );
+	@qry_vector = ( );
+	%docs_freq_hash = ( );
+	%corp_freq_hash = ( );
+	%stoplist_hash  = ( );
+	@titles_vector  = ( );
+	%relevance_hash = ( );
+	
+	if ($mode == 31) {
+		&init_files ( "unstemmed" );
+	} else {
+		&init_files ( "stemmed" );
+	}
+	
+    &init_corp_freq;
+    &init_doc_vectors($mode);
+    &init_qry_vectors($mode);
+    
+    my $averaged_result = (0, 0, 0, 0, 0, 0, 0, 0);
+	
+	my $tot_queries = scalar @qry_vector - 1;
+	
+	my $idx = 0;
+	
+	for my $ind ( 1 .. $tot_queries ) {
+		&get_retrieved_set( $qry_vector[$ind], $mode );
+		my @recall = &comp_recall( $relevance_hash{ $ind }, $ind );
+		for ( $idx = 0 ; $idx < scalar %{ $averaged_result } ; $idx++ ) {
+			$$averaged_result[$idx] += $recall[$idx];
+		}
+	}
+	
+    print $name, "\t";
+    
+    for ( $idx = 0 ; $idx < scalar %{ $averaged_result } ; $idx++ ) {
+        printf "%.3f\t", $$averaged_result[$idx];
+    }
+    
+    print "\n";
 }
 
 
@@ -1127,7 +1279,7 @@ sub cosine_sim_a {
     foreach $term (@val1) { $sum_sq1 += $term * $term; }
     foreach $term (@val2) { $sum_sq2 += $term * $term; }
 
-    return ( $num / sqrt( $sum_sq1 * $sum_sq2 ));
+    return &cosine_sim_b($num, $sum_sq1, $sum_sq2);
 }
 
 
@@ -1141,19 +1293,137 @@ sub cosine_sim_a {
 
 sub cosine_sim_b {
 
-    my $vec1 = shift;
-    my $vec2 = shift;
-
+    my $num     = shift;
     my $sum_sq1 = shift;
     my $sum_sq2 = shift;
 
-    my $num     = 0;
-    my $key     = undef;
-    my $val     = undef;
+    return ( $num / sqrt( $sum_sq1 * $sum_sq2 ));
+}
 
-    while (($key, $val) = each %{ $vec1 }) {
-	$num += $val * $$vec2{ $key };
+########################################################
+## DICE_SIM
+## 
+## Computes the Dice similarity for two vectors
+## represented as associate arrays.
+########################################################
+
+sub dice_sim_a {
+
+    my $vec1 = shift;
+    my $vec2 = shift;
+
+    my $num     = 0;
+    my $sum1 = 0;
+    my $sum2 = 0;
+
+    my @val1 = values %{ $vec1 };
+    my @val2 = values %{ $vec2 };
+
+    # determine shortest length vector. This should speed 
+    # things up if one vector is considerable longer than
+    # the other (i.e. query vector to document vector).
+
+    if ((scalar @val1) > (scalar @val2)) {
+	my $tmp  = $vec1;
+	   $vec1 = $vec2;
+	   $vec2 = $tmp;
     }
 
-    return ( $num / sqrt( $sum_sq1 * $sum_sq2 ));
+    # calculate the cross product
+
+    my $key = undef;
+    my $val = undef;
+
+    while (($key, $val) = each %{ $vec1 }) {
+	$num += $val * ($$vec2{ $key } || 0);
+    }
+
+    # calculate the sum of squares
+
+    my $term = undef;
+
+    foreach $term (@val1) { $sum1 += $term; }
+    foreach $term (@val2) { $sum2 += $term; }
+
+    return &dice_sim_b($num, $sum1, $sum2);
+}
+
+########################################################
+## DICE_SIM
+## 
+## Computes the Dice similarity for two vectors
+## represented as associate arrays.
+########################################################
+
+sub dice_sim_b {
+
+    my $num  = shift;
+    my $sum1 = shift;
+    my $sum2 = shift;
+
+    return ( 2 * $num / ($sum1 + $sum2) );
+}
+
+########################################################
+## JACCARD_SIM
+## 
+## Computes the Jaccard similarity for two vectors
+## represented as associate arrays.
+########################################################
+
+sub jaccard_sim_a {
+
+    my $vec1 = shift;
+    my $vec2 = shift;
+
+    my $num     = 0;
+    my $sum1 = 0;
+    my $sum2 = 0;
+
+    my @val1 = values %{ $vec1 };
+    my @val2 = values %{ $vec2 };
+
+    # determine shortest length vector. This should speed 
+    # things up if one vector is considerable longer than
+    # the other (i.e. query vector to document vector).
+
+    if ((scalar @val1) > (scalar @val2)) {
+	my $tmp  = $vec1;
+	   $vec1 = $vec2;
+	   $vec2 = $tmp;
+    }
+
+    # calculate the cross product
+
+    my $key = undef;
+    my $val = undef;
+
+    while (($key, $val) = each %{ $vec1 }) {
+	$num += $val * ($$vec2{ $key } || 0);
+    }
+
+    # calculate the sum of squares
+
+    my $term = undef;
+
+    foreach $term (@val1) { $sum1 += $term; }
+    foreach $term (@val2) { $sum2 += $term; }
+
+    return &jaccard_sim_b($num, $sum1, $sum2);
+}
+
+########################################################
+## JACCARD_SIM
+## 
+## Computes the Jaccard similarity for two vectors
+## represented as associate arrays.
+########################################################
+
+sub jaccard_sim_b {
+
+    my $num  = shift;
+    my $sum1 = shift;
+    my $sum2 = shift;
+
+    return ( $num / ($sum1 + $sum2 - $num) );
 }
