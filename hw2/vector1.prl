@@ -255,7 +255,7 @@ sub init_corp_freq {
 	my ($qry_num,
 	    $rel_doc)  = split /\s+/, $str;
 
-	$relevance_hash{ "$qry_num" }{ "$rel_doc" } = 1;
+	$relevance_hash{ int($qry_num) }{ int($rel_doc) } = 1;
     }
 }
 
@@ -424,13 +424,13 @@ sub init_qry_vectors {
 	}
     }
     
-    if ($mode != 11 && $mode != 13) {
-    	foreach my $hash (@qry_vector) {
-    		foreach my $key (keys %{ $hash }) {
-    			$hash->{ $key } *= log( $qry_num / $docs_freq_hash{ $key });
-    		}
-    	}
-    }
+    #if ($mode != 11 && $mode != 13) {
+    	#foreach my $hash (@qry_vector) {
+    		#foreach my $key (keys %{ $hash }) {
+    			#$hash->{ $key } *= log( $qry_num / $docs_freq_hash{ $key });
+    		#}
+    	#}
+    #}
 
     return $qry_num;
 }
@@ -463,14 +463,21 @@ sub init_qry_vectors {
 ##########################################################
 
 sub main_loop {
+	# Set mode for Part 2 (e.g. 0 := default, 31 := 3(a), 32 := 3(b))
+	my $mode = 31;
 
     print "INITIALIZING VECTORS ... \n";
 
-    &init_files ( "unstemmed" );
+    if ($mode == 31) {
+		&init_files ( "unstemmed" );
+	} else {
+		&init_files ( "stemmed" );
+	}
+	
     &init_corp_freq;
     
-    my $total_docs = &init_doc_vectors(0);
-    my $total_qrys = &init_qry_vectors(0);
+    my $total_docs = &init_doc_vectors($mode);
+    my $total_qrys = &init_qry_vectors($mode);
 
     while (1) {
 
@@ -506,7 +513,7 @@ EndOfMenu
 
 	# default and choice 1 is
 
-	&get_and_show_retrieved_set;
+	&get_and_show_retrieved_set($mode);
     } 
 }
 
@@ -540,7 +547,7 @@ EndOfMenu
 ##########################################################
 
 sub get_and_show_retrieved_set {
-	my $mode = 0;
+	my $mode = shift;
 
     print << "EndOfMenu";
 
@@ -767,7 +774,7 @@ sub shw_retrieved_set {
 EndOfList
     ;
 
-    my $rel_num = ($qry_num =~ /^\d$/) ? "0$qry_num" : $qry_num;
+    my $rel_num = $qry_num;
     my $index   = 0;
 
     for $index ( 0 .. $max_show ) {
@@ -1183,6 +1190,8 @@ sub run_experiment {
 	my $name = shift;
 	my $mode = shift;
 	
+	# Reset file names
+	
 	$token_docs = "$DIR/cacm";
 	$corps_freq = "$DIR/cacm";
 	$stoplist   = "$DIR/common_words";
@@ -1192,6 +1201,8 @@ sub run_experiment {
 	$token_intr = "$HOME/interactive";
 	$inter_freq = "$HOME/interactive";
 	
+	# Reset global variables
+	
 	@doc_vector = ( );
 	@qry_vector = ( );
 	%docs_freq_hash = ( );
@@ -1199,6 +1210,8 @@ sub run_experiment {
 	%stoplist_hash  = ( );
 	@titles_vector  = ( );
 	%relevance_hash = ( );
+	
+	# Re-initialize vectors
 	
 	if ($mode == 31) {
 		&init_files ( "unstemmed" );
@@ -1210,7 +1223,9 @@ sub run_experiment {
     &init_doc_vectors($mode);
     &init_qry_vectors($mode);
     
-    my $averaged_result = (0, 0, 0, 0, 0, 0, 0, 0);
+    # Collect results
+    
+    my @averaged_result = (0, 0, 0, 0, 0, 0, 0, 0);
 	
 	my $tot_queries = scalar @qry_vector - 1;
 	
@@ -1219,15 +1234,17 @@ sub run_experiment {
 	for my $ind ( 1 .. $tot_queries ) {
 		&get_retrieved_set( $qry_vector[$ind], $mode );
 		my @recall = &comp_recall( $relevance_hash{ $ind }, $ind );
-		for ( $idx = 0 ; $idx < scalar %{ $averaged_result } ; $idx++ ) {
-			$$averaged_result[$idx] += $recall[$idx];
+		for ( $idx = 0 ; $idx < scalar @averaged_result ; $idx++ ) {
+			$averaged_result[$idx] += $recall[$idx];
 		}
 	}
 	
+	# Print results
+	
     print $name, "\t";
     
-    for ( $idx = 0 ; $idx < scalar %{ $averaged_result } ; $idx++ ) {
-        printf "%.3f\t", $$averaged_result[$idx];
+    for ( $idx = 0 ; $idx < scalar @averaged_result ; $idx++ ) {
+        printf "%.3f\t", ($averaged_result[$idx] / $tot_queries);
     }
     
     print "\n";
