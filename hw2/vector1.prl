@@ -899,7 +899,7 @@ sub comp_recall {
     my @recall_level = (); # desired recall levels
     
     for $index (1 .. 9) {
-    	push @recall_level, int(100 * ($index / 10));
+    	push @recall_level, int(10 * $index);
     }
     
     push @recall_level, 25;
@@ -949,7 +949,7 @@ sub comp_recall {
     }
 
     my $prec_mean1 = ($precisions{25} + $precisions{50} + $precisions{75}) / 3;
-    my $prec_mean2 = (eval join '+', (map {$precisions{int(100 * ($_ / 10))}} (1..10))) / 10;
+    my $prec_mean2 = (eval join '+', (map {$precisions{int(10 * $_)}} (1..10))) / 10;
     my $prec_norm = 1 - ((eval join '+', (map {log($_)} @doc_rank)) - (eval join '+', (map {log($_)} (1..$tot_rel)))) /
     	($tot_number * log($tot_number) - ($tot_number - $tot_rel) * log($tot_number - $tot_rel) - $tot_rel * log($tot_rel));
     my $recall_norm = 1 - ((eval join '+', @doc_rank) - (eval join '+', (1..$tot_rel))) / ($tot_rel * ($tot_number - $tot_rel));
@@ -1121,7 +1121,6 @@ sub full_cosine_similarity {
     my $sum_sq2 = 0;
 
     while (($term_one, $weight_one) = each %{ $qry_vect }) {
-    	my $weight_two = $$doc_vect{ $term_one } || 0;
     	$num += $weight_one * ($$doc_vect{ $term_one } || 0);
     	$sum1 += $weight_one;
     	$sum_sq1 += ($weight_one * $weight_one);
