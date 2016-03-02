@@ -28,22 +28,12 @@ public class Vector {
 	    DEFAULT
 	}
 	
-	private static final String DIR = "C:\\Users\\Sanghyun\\Documents\\GitHub\\info-retrieval\\hw2";
-	private static final String HOME = "C:\\Users\\Sanghyun\\Documents\\GitHub\\info-retrieval\\hw2";
+	private static String DIR = "";
+	private static String HOME = "";
 	
 	private static final String STEMMED = "stemmed";
 	private static final String TOKENIZED = "tokenized";
 	private static final String HISTOGRAM = "hist";
-
-	private static final String TOKEN_DOCS = DIR + "\\cacm";
-	private static final String CORPS_FREQ = DIR + "\\cacm";
-	private static final String STOPLIST = DIR + "\\common_words";
-	private static final String TITLES = DIR + "\\titles.short";
-	private static final String TOKEN_QRYS = DIR + "\\query";
-	private static final String QUERY_FREQ = DIR + "\\query";
-	private static final String QUERY_RELV = DIR + "\\query.rels";
-
-	private static final String TOKEN_INTR = HOME + "\\interactive";
 
 	private static final ArrayList<HashMap<String, Double>> docVector = new ArrayList<HashMap<String, Double>>();
 	private static final ArrayList<HashMap<String, Double>> qryVector = new ArrayList<HashMap<String, Double>>();
@@ -65,7 +55,7 @@ public class Vector {
 		corpFreqHash.clear();
 
 		try {
-			in = new FileReader(CORPS_FREQ + "." + (isStemmed ? STEMMED : TOKENIZED) + "." + HISTOGRAM);
+			in = new FileReader(DIR + "/cacm." + (isStemmed ? STEMMED : TOKENIZED) + "." + HISTOGRAM);
 			br = new BufferedReader(in);
 			
 			String line;
@@ -80,7 +70,7 @@ public class Vector {
 		}
 		
 		try {
-			in = new FileReader(QUERY_FREQ + "." + (isStemmed ? STEMMED : TOKENIZED) + "." + HISTOGRAM);
+			in = new FileReader(DIR + "/query." + (isStemmed ? STEMMED : TOKENIZED) + "." + HISTOGRAM);
 			br = new BufferedReader(in);
 			
 			String line;
@@ -99,7 +89,7 @@ public class Vector {
 		stoplistHash.clear();
 		
 		try {
-			in = new FileReader(STOPLIST + (isStemmed ? ("." + STEMMED) : ""));
+			in = new FileReader(DIR + "/common_words" + (isStemmed ? ("." + STEMMED) : ""));
 			br = new BufferedReader(in);
 			
 			String line;
@@ -114,7 +104,7 @@ public class Vector {
 		titlesVector.add("");
 		
 		try {
-			in = new FileReader(TITLES);
+			in = new FileReader(DIR + "/titles.short");
 			br = new BufferedReader(in);
 			
 			String line;
@@ -128,7 +118,7 @@ public class Vector {
 		relevanceHash.clear();
 		
 		try {
-			in = new FileReader(QUERY_RELV);
+			in = new FileReader(DIR + "/query.rels");
 			br = new BufferedReader(in);
 			
 			String line;
@@ -181,7 +171,7 @@ public class Vector {
 		double tWeight = 0.0;
 		
 		try {
-			in = new FileReader(TOKEN_DOCS + "." + (isStemmed ? STEMMED : TOKENIZED));
+			in = new FileReader(DIR + "/cacm." + (isStemmed ? STEMMED : TOKENIZED));
 			br = new BufferedReader(in);
 			
 			String word;
@@ -266,7 +256,7 @@ public class Vector {
 		double tWeight = 0.0;
 		
 		try {
-			in = new FileReader(TOKEN_QRYS + "." + (isStemmed ? STEMMED : TOKENIZED));
+			in = new FileReader(DIR + "/query." + (isStemmed ? STEMMED : TOKENIZED));
 			br = new BufferedReader(in);
 			
 			String word;
@@ -325,6 +315,9 @@ public class Vector {
 	}
 
 	public static void main(String[] args) {
+		DIR = args[0];
+		HOME = args[1];
+		
 		MODE mode = MODE.THREE_A;
 		
 		System.out.println("INITIALIZING VECTORS ...");
@@ -458,7 +451,7 @@ public class Vector {
 		double tWeight = 0.0;
 		
 		try {
-			in = new FileReader(TOKEN_INTR + "." + (isStemmed ? STEMMED : TOKENIZED));
+			in = new FileReader(HOME + "/interactive." + (isStemmed ? STEMMED : TOKENIZED));
 			br = new BufferedReader(in);
 			
 			String line;
