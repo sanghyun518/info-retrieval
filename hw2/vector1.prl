@@ -834,11 +834,11 @@ EndOfList
 ## used as global variables. These values are set by the function
 ## &get_retrieved_set.
 ##
-## 1) doc_simila[ $rank ] - contains the document numbers sorted 
+## 1) res_vector[ $rank ] - contains the document numbers sorted 
 ##                          in rank order based on the results of 
 ##                          the similarity function
 ##
-## 2) res_vector[ $docn ] - The similarity measure for each document, 
+## 2) doc_simula[ $docn ] - The similarity measure for each document, 
 ##                          relative to the query vector ( computed by 
 ##                          &get_retrieved_set).
 ##

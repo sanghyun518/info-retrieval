@@ -17,8 +17,27 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.IntStream;
 
+/**
+ * This class represents 'vctor1.prl' implemented in Java.
+ * It takes in two arguments: 
+ *     1. Path for 'DIR' (where all the data files are located)
+ *     2. Path for 'HOME' (the directory for storing interactive query results)
+ *     
+ * All method/variable names (and their roles) are identical 
+ * to the ones in the Perl version. 
+ * 
+ * Consult the 'README.txt' for descriptions on how this code
+ * can be compiled and executed via command line.
+ *     
+ * @author Sanghyun
+ *
+ */
 public class Vector {
 	
+	/**
+	 * Different permutations defined in the homework
+	 * (e.g. ONE_A == permutation for 1(a))
+	 */
 	private enum MODE {
 	    ONE_A, ONE_B, ONE_C,
 	    TWO_A, TWO_B,
@@ -28,6 +47,10 @@ public class Vector {
 	    DEFAULT
 	}
 	
+	/****************************************
+	 * Program Defaults and Global Variables
+	 ****************************************/
+	
 	private static String DIR = "";
 	private static String HOME = "";
 	
@@ -35,16 +58,79 @@ public class Vector {
 	private static final String TOKENIZED = "tokenized";
 	private static final String HISTOGRAM = "hist";
 
+	/**
+	 * An array of hashes, each array index indicating a particular document's weight "vector".
+	 */
 	private static final ArrayList<HashMap<String, Double>> docVector = new ArrayList<HashMap<String, Double>>();
+	
+	/**
+	 * An array of hashes, each array index indicating a particular query's weight "vector".
+	 */
 	private static final ArrayList<HashMap<String, Double>> qryVector = new ArrayList<HashMap<String, Double>>();
+	
+	/**
+	 * A hash map which holds <token, frequency> pairs where
+	 * 
+	 *     token     = a particular word or tag found in the cacm corpus.
+	 *     frequency = the total number of times the token appears in the corpus.
+	 */
 	private static final HashMap<String, Integer> docsFreqHash = new HashMap<String, Integer>();
+	
+	/**
+	 * A hash map which holds <token, frequency> pairs where
+	 * 
+	 *     token     = a particular word or tag found in the corpus
+	 *     frequency = the total number of times the token appears per
+	 *                 document-- that is a token is counted only once
+	 *                 per document if it is present (even if it appears
+	 *                 several times within that document).
+	 */
 	private static final HashMap<String, Integer> corpFreqHash = new HashMap<String, Integer>();
+	
+	/**
+	 * Common list of uninteresting words which are likely irrelevant to any query.
+	 */
 	private static final HashSet<String> stoplistHash = new HashSet<String>();
+	
+	/**
+	 * Vector of the cacm journal titles. Indexed in order of appearance within the corpus.
+	 */
 	private static final ArrayList<String> titlesVector = new ArrayList<String>();
+	
+	/**
+	 * A hash of hashes where each <key, value> pair consists of
+	 * 
+	 *     key   = a query number
+	 *     value = a hash consisting of document number keys with associated
+	 *             numeric values indicating the degree of relevance the 
+	 *             document has to the particular query
+	 */
 	private static final HashMap<Integer, HashMap<Integer, Boolean>> relevanceHash = new HashMap<Integer, HashMap<Integer, Boolean>>();
+	
+	/**
+	 * Array used for storing query to document or document to document
+	 * similarity calculations (determined by cosine_similarity, etc. )
+	 */
 	private static double[] docSimula;
+	
+	/**
+	 * Array used for storing the document numbers of the most relevant
+	 * documents in a query to document or document to document calculation.
+	 */
 	private static int[] resVector;
 
+	/**
+	 * This function reads in corpus and document frequencies from
+	 * the provided histogram file for both the document set
+	 * and the query set. This information will be used in
+	 * term weighting.
+	 * 
+	 * It also initializes the arrays representing the stoplist,
+	 * title list and relevance of document given query.
+	 * 
+	 * @param mode
+	 * @throws Exception
+	 */
 	private static void initCorpFreq(MODE mode) throws Exception {
 		boolean isStemmed = mode != MODE.THREE_A;
 		
@@ -101,7 +187,9 @@ public class Vector {
 		}
 		
 		titlesVector.clear();
-		titlesVector.add("");
+		titlesVector.add(""); // push one empty value
+		                      // so that indices correspond with title
+		                      // numbers.
 		
 		try {
 			in = new FileReader(DIR + "/titles.short");
@@ -139,11 +227,34 @@ public class Vector {
 		}
 	}
 	
+    /**
+	 *  This function reads in tokens from the document file.
+	 *  When a .I token is encountered, indicating a document
+	 *  break, a new vector is begun. When individual terms
+	 *  are encountered, they are added to a running sum of
+	 *  term frequencies. To save time and space, it is possible
+	 *  to normalize these term frequencies by inverse document
+	 *  frequency (or whatever other weighting strategy is
+	 *  being used) while the terms are being summed or in
+	 *  a posthoc pass.  The array of hashes
+	 *
+	 *    docVector[doc_num]<term, weight>
+	 *
+	 *  stores these normalized term weights.
+	 *
+	 *  It is possible to weight different regions of the document
+	 *  differently depending on likely importance to the classification.
+	 *  The relative base weighting factors can be set when 
+	 *  different segment boundaries are encountered.
+	 * 
+	 * @param mode
+	 * @throws Exception
+	 */
 	private static int initDocVectors(MODE mode) throws Exception {
-		int titleBaseWeight = 3;
-		int keywdBaseWeight = 4;
-		int abstrBaseWeight = 1;
-		int authrBaseWeight = 3;
+		int titleBaseWeight = 3; // weight given a title token
+		int keywdBaseWeight = 4; // weight given a key word token
+		int abstrBaseWeight = 1; // weight given an abstract word token
+		int authrBaseWeight = 3; // weight given an an author token
 		
 		if (mode == MODE.FIVE_A) {
 			titleBaseWeight = 1;
@@ -165,10 +276,11 @@ public class Vector {
 		boolean isStemmed = mode != MODE.THREE_A;
 		
 		docVector.clear();
-		docVector.add(new HashMap<String, Double>());
+		docVector.add(new HashMap<String, Double>()); // push one empty value so that
+		                                              // indices correspond with document numbers
 		
-		int docNum = 0;
-		double tWeight = 0.0;
+		int docNum = 0; // current document number and total docs at end
+		double tWeight = 0.0; // current weight assigned to document token
 		
 		try {
 			in = new FileReader(DIR + "/cacm." + (isStemmed ? STEMMED : TOKENIZED));
@@ -178,10 +290,10 @@ public class Vector {
 			while ((word = br.readLine()) != null) {
 				word = word.trim();
 				
-				if (".I 0".equals(word)) {
+				if (".I 0".equals(word)) { // indicates end of file so kick out
 					break;
 				} else {
-					if (word.startsWith(".I")) {
+					if (word.startsWith(".I")) { // indicates start of a new document
 						docVector.add(new HashMap<String, Double>());
 						docNum++;
 						
@@ -240,6 +352,14 @@ public class Vector {
 		return docNum;
 	}
 	
+	/**
+	 * This method should be nearly identical to the step
+	 * for initializing document vectors.
+	 * 
+	 * @param mode
+	 * @return
+	 * @throws Exception
+	 */
 	private static int initQryVectors(MODE mode) throws Exception {
 		int queryBaseWeight = 2;
 		int queryAuthWeight = 2;
@@ -305,6 +425,13 @@ public class Vector {
 		return qryNum;
 	}
 
+	/**
+	 * Closes file resource
+	 * 
+	 * @param in
+	 * @param br
+	 * @throws IOException
+	 */
 	private static void closeResouce(FileReader in, BufferedReader br) throws IOException {
 		if (in != null) {
 			in.close();
@@ -314,6 +441,13 @@ public class Vector {
 		}
 	}
 
+	/**
+	 * Initializes document and query vectors.
+	 * Then offers a menu and switch to appropriate functions in an
+	 * endless loop.
+	 * 
+	 * @param args Paths for 'DIR' and 'HOME'
+	 */
 	public static void main(String[] args) {
 		DIR = args[0];
 		HOME = args[1];
@@ -379,6 +513,13 @@ public class Vector {
 		}
 	}
 	
+	/**
+	 * Searches and displays documents similar to a query or document.
+	 * 
+	 * @param mode
+	 * @param reader
+	 * @throws Exception
+	 */
 	private static void getAndShowRetrievedSet(MODE mode, Scanner reader) throws Exception {
 		System.out.println("    Find documents similar to:\n" + 
 				"        (1) a query from 'query.raw'\n" + 
@@ -392,6 +533,9 @@ public class Vector {
 		int compType = optionStr.matches("[1-3]") ? Integer.parseInt(optionStr) : 1;
 		
 		System.out.print("\n");
+		
+		// if not an interactive query than we need to retrieve which
+		// query/document we want to use from the corpus
 		
 		int vectNum = 1;
 		
@@ -499,6 +643,18 @@ public class Vector {
 		return intVector;
 	}
 	
+	/**
+	 * This method computes the document similarity between the
+	 * given vector $qry_vector{} and all vectors in the document
+	 * collection storing these values in the array <code>docSimula</code>
+	 * 
+	 * An array of the document numbers is then sorted by this
+	 * similarity function, forming the rank order of documents
+	 * for use in the retrieval set.
+	 * 
+	 * @param qryVector
+	 * @param mode
+	 */
 	private static void getRetrievedSet(HashMap<String, Double> qryVector, MODE mode) {
 		int totNumber = docVector.size() - 1;
 		
@@ -536,6 +692,20 @@ public class Vector {
 		}
 	}
 	
+	/**
+	 * Displays retrieved documents in tabular form.
+	 * 
+	 * In the case of "Query"-based retrieval, the relevance
+	 * judgments for the returned set are displayed. This is 
+	 * ignored when doing document-to-document comparisons, as
+	 * there are nor relevance judgments.
+	 * 
+	 * @param maxShow the maximum number of matched documents to display.
+	 * @param qryNum the vector number of the query
+	 * @param qryVect the query vector (passed by reference)
+	 * @param comparison "Query" or "Document" (type of vector being compared to)
+	 * @param reader
+	 */
 	private static void shwRetrievedSet(int maxShow, int qryNum, HashMap<String, Double> qryVect, String comparison, Scanner reader) {
 		System.out.printf("************************************************************\n" + 
 				"	Documents Most Similar To %s number %d\n" + 
@@ -591,7 +761,15 @@ public class Vector {
 		}
 	}
 	
+	/**
+	 * Returns a list of precision/recall values computed for different levels.
+	 * @param relHash
+	 * @param qvn
+	 * @return
+	 */
 	private static double[] compRecall(HashMap<Integer, Boolean> relHash, int qvn) {
+		// Make list of ranks for relevant documents
+		
 		List<Integer> docRank = new ArrayList<Integer>();
 		
 		int totNumber = docVector.size() - 1;
@@ -604,6 +782,8 @@ public class Vector {
 			index++;
 		}
 		
+		// Define recall levels to compute
+		
 		List<Integer> recallLevel = new ArrayList<Integer>();
 		
 		for (int i = 1; i <= 9; i++) {
@@ -614,6 +794,8 @@ public class Vector {
 		recallLevel.add(75);
 		
 		Collections.sort(recallLevel);
+		
+		// Compute recall/precision pairs
 		
 		Map<Integer, Double> precisions = new HashMap<Integer, Double>();
 		
@@ -632,6 +814,7 @@ public class Vector {
 			double recallLvl = (double) recallLevel.get(idx) / (double) 100;
 			
 			while (currRecallLevel <= recallLvl && recallLvl < nextRecallLevel) {
+				// Perform interpolation for precision
 				double precision = (recallLvl - currRecallLevel) / (nextRecallLevel - currRecallLevel) 
 						* (nextPrecLevel - currPrecLevel) + currPrecLevel;
 				precisions.put(recallLevel.get(idx), precision);
@@ -661,11 +844,19 @@ public class Vector {
 		double recallNorm = 1.0 - ((double) (docRank.stream().reduce(0, Integer::sum) - IntStream.rangeClosed(1, totRel).sum())) 
 				/ ((double) totRel * (totNumber - totRel));
 		
-		
 		return new double[] { precisions.get(25), precisions.get(50), precisions.get(75), precisions.get(100),
 				precMean1, precMean2, precNorm, recallNorm };
 	}
 	
+	/**
+	 * This method takes the rank orders and similarity arrays
+	 * and prints out only the relevant documents, in an order
+	 * and manner of presentation very similar to <code>showRetrievedSet</code>.
+	 * 
+	 * @param relHash
+	 * @param qvn
+	 * @param qvector
+	 */
 	private static void showRelvnt(HashMap<Integer, Boolean> relHash, int qvn, HashMap<String, Double> qvector) {
 		System.out.printf("    ************************************************************\n" + 
 				"	Documents relevant to query number %d\n" + 
@@ -687,6 +878,20 @@ public class Vector {
 		}
 	}
 	
+	/**
+	 * This method shows the terms that two vectors
+	 * have in common, the relative weights of these terms
+	 * in the two vectors, and any additional useful information
+	 * such as the document frequency of the terms, etc.
+	 * 
+	 * Useful for understanding the reason why documents
+	 * are judged as relevant.
+	 * 
+	 * @param qryVect
+	 * @param docVect
+	 * @param qryNum
+	 * @param docNum
+	 */
 	private static void showOverlap(HashMap<String, Double> qryVect, HashMap<String, Double> docVect, int qryNum, int docNum) {
 		System.out.println("============================================================");
 		System.out.printf("%-15s  %8d   %8d\t%s\n", "Vector Overlap", qryNum, docNum, "Docfreq");
@@ -700,6 +905,12 @@ public class Vector {
 		});
 	}
 	
+	/**
+	 * Prompts for a document number and query number,
+	 * and then calls a function to show similarity.
+	 * 
+	 * @param reader
+	 */
 	private static void doFullCosineSimilarity(Scanner reader) {
 		System.out.print("\n");
 		System.out.print("1st Document/Query number: ");
@@ -717,6 +928,16 @@ public class Vector {
 		fullCosineSimilarity(qryVector.get(numOne), docVector.get(numTwo), numOne, numTwo);
 	}
 	
+	/**
+	 * This method computes the cosine similarity between
+	 * two vectors and display the information that went into
+	 * this calculation, useful for debugging purposes.
+	 * 
+	 * @param qryVect
+	 * @param docVect
+	 * @param qryIndx
+	 * @param docIndx
+	 */
 	private static void fullCosineSimilarity(HashMap<String, Double> qryVect, HashMap<String, Double> docVect, int qryIndx, int docIndx) {
 		System.out.println("============================================================");
 		System.out.printf("%-15s  %8d   %8d\t%-15s\n", "Vector Overlap", qryIndx, docIndx, "Weight Product");
@@ -742,6 +963,17 @@ public class Vector {
 		System.out.println("============================================================");
 	}
 	
+	/**
+	 * This method tests the various precision/recall
+	 * measures discussed in the assignment and store cumulative
+	 * statistics over all queries.
+	 * 
+	 * As each query takes a few seconds to process, print
+	 * some sort of feedback for each query so the user
+	 * has something to watch.
+	 * 
+	 * @throws Exception
+	 */
 	private static void fullPrecisionRecallTest() throws Exception {
 		System.out.println("======================================================================================");
 		System.out.println("Permutation Name\tP_0.25\tP_0.50\tP_0.75\tP_1.00\tP_mean1\tP_mean2\tP_norm\tR_norm");
@@ -757,6 +989,13 @@ public class Vector {
 		runExperiment("Default Setting   ", MODE.DEFAULT);
 	}
 	
+	/**
+	 * Runs an experiment based on one particular permutation.
+	 * 
+	 * @param name
+	 * @param mode
+	 * @throws Exception
+	 */
 	private static void runExperiment(String name, MODE mode) throws Exception {
 		// Re-initialize vectors
 		
@@ -790,10 +1029,20 @@ public class Vector {
 		System.out.print("\n");
 	}
 	
+	/**
+	 * Computes the cosine similarity for two vectors
+	 * @param vec1
+	 * @param vec2
+	 * @return
+	 */
 	private static double cosineSimA(HashMap<String, Double> vec1 , HashMap<String, Double> vec2) {
 		double num  = 0;
 		double sumSq1 = 0;
 		double sumSq2 = 0;
+		
+		// determine shortest length vector. This should speed
+		// things up if one vector is considerable longer than
+		// the other (i.e. query vector to document vector).
 		
 		if (vec1.size() > vec2.size()) {
 			HashMap<String, Double> temp = vec1;
@@ -801,11 +1050,15 @@ public class Vector {
 			vec2 = temp;
 		}
 		
+		// compute inner product
+		
 		Set<Entry<String, Double>> entrySet = vec1.entrySet();
 		for (Entry<String, Double> entry : entrySet) {
 			Double value = vec2.get(entry.getKey());
 			num += entry.getValue() *(value == null ? 0 : value);
 		}
+		
+		// compute sum of squares
 		
 		Collection<Double> values = vec1.values();
 		for (Double value : values) {
@@ -820,10 +1073,23 @@ public class Vector {
 		return cosineSimB(num, sumSq1, sumSq2);
 	}
 	
+	/**
+	 * Computes the cosine similarity for two vectors
+	 * @param num
+	 * @param sumSq1
+	 * @param sumSq2
+	 * @return
+	 */
 	private static double cosineSimB(double num, double sumSq1, double sumSq2) {
 		return num / Math.sqrt(sumSq1 + sumSq2);
 	}
 	
+	/**
+	 * Computes the Dice similarity for two vectors
+	 * @param vec1
+	 * @param vec2
+	 * @return
+	 */
 	private static double diceSimA(HashMap<String, Double> vec1 , HashMap<String, Double> vec2) {
 		double num  = 0;
 		double sum1 = 0;
@@ -854,10 +1120,23 @@ public class Vector {
 		return diceSimB(num, sum1, sum2);
 	}
 	
+	/**
+	 * Computes the Dice similarity for two vectors
+	 * @param num
+	 * @param sum1
+	 * @param sum2
+	 * @return
+	 */
 	private static double diceSimB(double num, double sum1, double sum2) {
 		return 2 * num / (sum1 + sum2);
 	}
 	
+	/**
+	 * Computes the Jaccard similarity for two vectors
+	 * @param vec1
+	 * @param vec2
+	 * @return
+	 */
 	private static double jaccardSimA(HashMap<String, Double> vec1 , HashMap<String, Double> vec2) {
 		double num  = 0;
 		double sum1 = 0;
@@ -888,6 +1167,13 @@ public class Vector {
 		return jaccardSimB(num, sum1, sum2);
 	}
 	
+	/**
+	 * Computes the Jaccard similarity for two vectors
+	 * @param num
+	 * @param sum1
+	 * @param sum2
+	 * @return
+	 */
 	private static double jaccardSimB(double num, double sum1, double sum2) {
 		return num / (sum1 + sum2 - num);
 	}
