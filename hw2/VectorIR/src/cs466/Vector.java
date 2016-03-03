@@ -484,7 +484,11 @@ public class Vector {
 				
 				System.out.print("Enter Options: ");
 				
-				String optionStr = reader.next("[1-4]*");
+				String optionStr = "";
+				
+				if (reader.hasNextLine()) {
+					optionStr = reader.nextLine().trim();
+				}
 				
 				int option = optionStr.matches("[1-4]") ? Integer.parseInt(optionStr) : 1; 
 				
@@ -528,7 +532,11 @@ public class Vector {
 		
 		System.out.print("Choice: ");
 		
-		String optionStr = reader.next().trim();
+		String optionStr = "";
+		
+		if (reader.hasNextLine()) {
+			optionStr = reader.nextLine().trim();
+		}
 		
 		int compType = optionStr.matches("[1-3]") ? Integer.parseInt(optionStr) : 1;
 		
@@ -542,7 +550,9 @@ public class Vector {
 		if (compType != 2) {
 			System.out.print("Target Document/Query number: ");
 			
-			optionStr = reader.next().trim();
+			if (reader.hasNextLine()) {
+				optionStr = reader.nextLine().trim();
+			}
 			
 			vectNum = optionStr.matches("[1-9][0-9]*") ? Integer.parseInt(optionStr) : 1;
 			
@@ -553,7 +563,9 @@ public class Vector {
 		
 		int maxShow = 20;
 		
-		optionStr = reader.next().trim();
+		if (reader.hasNextLine()) {
+			optionStr = reader.nextLine().trim();
+		}
 		
 		maxShow = optionStr.matches("[0-9]+") ? Integer.parseInt(optionStr) : 20;
 		
@@ -707,7 +719,7 @@ public class Vector {
 	 * @param reader
 	 */
 	private static void shwRetrievedSet(int maxShow, int qryNum, HashMap<String, Double> qryVect, String comparison, Scanner reader) {
-		System.out.printf("************************************************************\n" + 
+		System.out.printf("    ************************************************************\n" + 
 				"	Documents Most Similar To %s number %d\n" + 
 				"    ************************************************************\n" + 
 				"    Similarity   Doc#  Author      Title\n" + 
@@ -739,7 +751,11 @@ public class Vector {
 		System.out.print("\n");
 		System.out.print("Show the terms that overlap between the query and retrieved docs (y/n): ");
 		
-		String showTerms = reader.next();
+		String showTerms = "";
+		
+		if (reader.hasNextLine()) {
+			showTerms = reader.nextLine().trim();
+		}
 		
 		if (!"n".equalsIgnoreCase(showTerms)) {
 			for (int i = 0; i < maxShow; i++) {
@@ -751,7 +767,11 @@ public class Vector {
 					System.out.print("\n");
 					System.out.print("Continue (y/n)? ");
 					
-					String cont = reader.next();
+					String cont = "";
+					
+					if (reader.hasNextLine()) {
+						cont = reader.nextLine().trim();
+					}
 					
 					if ("n".equalsIgnoreCase(cont)) {
 						break;
@@ -915,13 +935,21 @@ public class Vector {
 		System.out.print("\n");
 		System.out.print("1st Document/Query number: ");
 		
-		String numOneStr = reader.next().trim();
+		String numOneStr = "";
+		
+		if (reader.hasNextLine()) {
+			numOneStr = reader.nextLine().trim();
+		}
 		
 		int numOne = numOneStr.matches("[1-9][0-9]*") ? Integer.parseInt(numOneStr) : 1;
 		
 		System.out.print("2nd Document/Query number: ");
 		
-		String numTwoStr = reader.next().trim();
+		String numTwoStr = "";
+		
+		if (reader.hasNextLine()) {
+			numTwoStr = reader.nextLine().trim();
+		}
 		
 		int numTwo = numTwoStr.matches("[1-9][0-9]*") ? Integer.parseInt(numOneStr) : 1;
 		
