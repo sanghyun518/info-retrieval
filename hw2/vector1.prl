@@ -788,7 +788,7 @@ EndOfList
 	    print "  ";
 	}
 
-	my ($similarity) = ($doc_simula[$ind]    =~ /^([0-9]+\.\d{0,8})/);
+	my ($similarity) = $doc_simula[$ind] == 1 ? "1.00000000" : ($doc_simula[$ind]    =~ /^([0-9]+\.\d{0,8})/);
 	my  $title       = substr $titles_vector[$ind], 0, 47;
 
 	print "  ", $similarity, "   ", $title, "\n";
