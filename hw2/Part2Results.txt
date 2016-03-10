@@ -12,6 +12,11 @@ Equal Weights           0.424   0.276   0.183   0.083   0.295   0.273   0.702   
 Relative Weights        0.358   0.241   0.133   0.064   0.244   0.223   0.668   0.923
 Default Setting         0.440   0.316   0.189   0.073   0.315   0.285   0.703   0.927
 
+
+*************************************************************************
+* PERMUTATION 3(a)
+*************************************************************************
+
 -------------------------------------------------------------------------
 -------------------------------------------------------------------------
 
@@ -384,3 +389,343 @@ Document 2740:
     0.14126351   2541 Balzer       #  An Overview of the ISPL Co
     0.14086195   2700 Lipton       #  Reduction: A Method of Pro
     0.13641989   1752 Oppenheimer  #  Resource Management for a
+
+*************************************************************************
+* PERMUTATION 3(b)
+*************************************************************************
+
+-------------------------------------------------------------------------
+-------------------------------------------------------------------------
+
+Query 6:
+
+    ************************************************************
+        Documents Most Similar To Query number 6
+    ************************************************************
+    Similarity   Doc#  Author      Title
+    ==========   ==== ========     =============================
+
+    0.26695103   356  Ingerman     #  INTEREST (Algorithm 45)
+    0.26283685   740  Wright       #  INTEREST (Algorithm 45)
+    0.22086870   136  Ingerman     #  A Note on the Calculation
+*   0.19128529   1543 Howard       #  Computer Formulation of th
+    0.16627236   438  Gorn         #  Mechanical Pragmatics: A T
+*   0.15775669   2078 Eastman      #  Representations for Space
+    0.13175359   1009 Weinberg     #  Solution of Combinatorial
+    0.12943745   2389 Eastman      #  Preliminary Report on a Sy
+*   0.12940057   2828 Clark        #  Hierarchical Geometric Mod
+    0.12523921   3035 Wetherbe     #  A Strategic Planning Metho
+    0.12395776   1755 ACM          #  Proceedings of the ACM Sym
+    0.12146583   1186 Lynch        #  Recursive Solution of a Cl
+    0.11703008   242  Wilson       #  Notes on Geometric Weighte
+    0.11376731   2671 Stone        #  A Note on a Combinatorial
+    0.10962794   2417 Ehrlich      #  Four Combinatorial Algorit
+    0.10850890   2187 Amarel       #  Computer Science: A Concep
+    0.10703125   705  Blakely      #  Combinatorial Of M Things
+    0.10674193   402  Ingerman     #  Dynamic Declarations
+    0.10663946   704  Collins      #  Combinatorial of M Things
+    0.10591615   2753 Pfefferkorn  #  A Heuristic Problem Solvin
+    0.10564789   1256 King         #  Dynamic Variable Formattin
+
+============================================================
+Vector Overlap          6        356    Docfreq
+============================================================
+interest                4         11    70
+============================================================
+Vector Overlap          6        740    Docfreq
+============================================================
+interest                4         11    70
+============================================================
+Vector Overlap          6        136    Docfreq
+============================================================
+interest                4         11    70
+============================================================
+Vector Overlap          6       1543    Docfreq
+============================================================
+motion                  4         27    13
+============================================================
+Vector Overlap          6        438    Docfreq
+============================================================
+motion                  4         16    13
+============================================================
+Vector Overlap          6       2078    Docfreq
+============================================================
+robot                   2         27    3
+plan                    2         22    35
+============================================================
+Vector Overlap          6       1009    Docfreq
+============================================================
+combinatori             2         18    29
+============================================================
+Vector Overlap          6       2389    Docfreq
+============================================================
+plan                    2         36    35
+============================================================
+Vector Overlap          6       2828    Docfreq
+============================================================
+motion                  4          5    13
+geometr                 2         55    13
+============================================================
+Vector Overlap          6       3035    Docfreq
+============================================================
+plan                    2         49    35
+
+-------------------------------------------------------------------------
+-------------------------------------------------------------------------
+
+Query 9:
+
+    ************************************************************
+        Documents Most Similar To Query number 9
+    ************************************************************
+    Similarity   Doc#  Author      Title
+    ==========   ==== ========     =============================
+
+    0.48383580   1685 Schurmann    #  GAN, a System for Generati
+    0.39612962   2949 Tajibnapis   #  A Correctness Proof of a T
+*   0.35078846   3068 Popek        #  A Model for Verification o
+    0.34792937   2197 Nielsen      #  The Merit of Regional Comp
+    0.33934742   2951 Mamrak       #  Dynamic Response Time Pred
+    0.32654059   2614 Crandall     #  Arrow to Precedence Networ
+*   0.31653311   3158 Denning      #  Secure Personal Computing
+    0.31480134   2776 Chambers     #  Computer Networks in Highe
+    0.30490356   1695 Dill         #  PLEXUS-An On-Line System f
+*   0.30472066   2372 Conway       #  On the Implementation of S
+    0.29568028   3082 Lamport      #  Time, Clocks, and the Orde
+    0.29050727   2948 Heckel       #  A Terminal-Oriented Commun
+    0.28712477   2969 Morgan       #  Optimal Program and Data L
+    0.28296652   2371 Walden       #  A System for Interprocess
+    0.28276411   2621 Purdy        #  A High Security Log-in Pro
+    0.28128770   2311 Benjamin     #  A Generational Perspective
+    0.27797974   1261 Larsen       #  Modeling and Simulation of
+    0.26944360   2515 Corneil      #  Minimal Event-Node Network
+    0.26902025   1750 Fuchel       #  Considerations in the Desi
+    0.26729660   2317 Rosen        #  Programming Systems and La
+    0.25989549   1723 Fisher       #  Computer Construction of P
+
+============================================================
+Vector Overlap          9       1685    Docfreq
+============================================================
+network                 4        135    90
+system                  4          5    728
+============================================================
+Vector Overlap          9       2949    Docfreq
+============================================================
+oper                    2          8    381
+network                 4         82    90
+distribut               2         52    123
+system                  4          5    728
+============================================================
+Vector Overlap          9       3068    Docfreq
+============================================================
+secur                   2         51    31
+oper                    2         21    381
+system                  4         16    728
+============================================================
+Vector Overlap          9       2197    Docfreq
+============================================================
+oper                    2          2    381
+network                 4         75    90
+============================================================
+Vector Overlap          9       2951    Docfreq
+============================================================
+network                 4         60    90
+system                  4         17    728
+============================================================
+Vector Overlap          9       2614    Docfreq
+============================================================
+network                 4         39    90
+============================================================
+Vector Overlap          9       3158    Docfreq
+============================================================
+secur                   2         46    31
+network                 4         32    90
+============================================================
+Vector Overlap          9       2776    Docfreq
+============================================================
+consider                2          3    66
+oper                    2          2    381
+network                 4         53    90
+============================================================
+Vector Overlap          9       1695    Docfreq
+============================================================
+oper                    2          2    381
+network                 4         64    90
+system                  4         19    728
+============================================================
+Vector Overlap          9       2372    Docfreq
+============================================================
+secur                   2         51    31
+oper                    2         10    381
+system                  4         22    728
+
+-------------------------------------------------------------------------
+-------------------------------------------------------------------------
+
+Query 22:
+
+    ************************************************************
+        Documents Most Similar To Query number 22
+    ************************************************************
+    Similarity   Doc#  Author      Title
+    ==========   ==== ========     =============================
+
+*   0.47681722   2678 Wright       #  Visible Surface Plotting P
+*   0.42248605   2751 Phong        #  Illumination for Computer
+*   0.39536413   2384 Williamson   #  Hidden-Line Plotting Progr
+*   0.38648093   2473 Macleod      #  Hidden-Line Plotting Progr
+*   0.37557813   2369 Matsushita   #  Hidden Lines Elimination f
+*   0.35207207   2564 Ellis        #  Hidden-Line Plotting Progr
+*   0.35207207   2637 Ellis        #  Hidden-Line Plotting Progr
+*   0.33734212   2441 Williamson   #  Hidden-Line Plotting Progr
+    0.33014560   2004 Bouknight    #  A Procedure for Generation
+*   0.32311510   2638 Gaither      #  Hidden-Line Plotting Progr
+    0.29220003   1915 Galimberti   #  An Algorithm for Hidden Li
+*   0.29100236   2829 Blinn        #  Texture and Reflection in
+*   0.28588693   2827 Levin        #  A Parametric Algorithm for
+    0.24576671   1978 Smith        #  The Use of Interactive Gra
+*   0.23277438   2828 Clark        #  Hierarchical Geometric Mod
+    0.23266143   2913 Crow         #  The Aliasing Problem in Co
+    0.20778755   2924 Wu
+    0.20379087   2841 Clark        #  Designing Surfaces in 3-D
+    0.20367617   3049 Wendorf      #  A Simply Extended and Modi
+    0.18119597   52   Cook         #  An Efficient Method for Ge
+    0.16967424   88   Hicks        #  An Efficient Method for Ge
+
+============================================================
+Vector Overlap         22       2678    Docfreq
+============================================================
+line                    2         13    110
+hidden                  4         20    17
+surfac                  2         32    33
+algorithm               2          2    1342
+graphic                 2         14    80
+comput                  2          4    926
+============================================================
+Vector Overlap         22       2751    Docfreq
+============================================================
+hidden                  4         36    17
+surfac                  2         32    33
+algorithm               2          2    1342
+graphic                 2         29    80
+comput                  2          9    926
+============================================================
+Vector Overlap         22       2384    Docfreq
+============================================================
+line                    2         23    110
+hidden                  4         36    17
+surfac                  2         18    33
+algorithm               2          2    1342
+============================================================
+Vector Overlap         22       2473    Docfreq
+============================================================
+line                    2         23    110
+hidden                  4         36    17
+surfac                  2         18    33
+algorithm               2          2    1342
+============================================================
+Vector Overlap         22       2369    Docfreq
+============================================================
+line                    2         26    110
+hidden                  4         41    17
+graphic                 2         29    80
+comput                  2          9    926
+============================================================
+Vector Overlap         22       2564    Docfreq
+============================================================
+line                    2         10    110
+hidden                  4         15    17
+algorithm               2          2    1342
+============================================================
+Vector Overlap         22       2637    Docfreq
+============================================================
+line                    2         10    110
+hidden                  4         15    17
+algorithm               2          2    1342
+============================================================
+Vector Overlap         22       2441    Docfreq
+============================================================
+line                    2         10    110
+hidden                  4         15    17
+algorithm               2          2    1342
+============================================================
+Vector Overlap         22       2004    Docfreq
+============================================================
+line                    2         13    110
+hidden                  4         20    17
+surfac                  2         41    33
+algorithm               2          4    1342
+graphic                 2         25    80
+comput                  2         13    926
+============================================================
+Vector Overlap         22       2638    Docfreq
+============================================================
+line                    2         10    110
+hidden                  4         15    17
+algorithm               2          2    1342
+
+-------------------------------------------------------------------------
+-------------------------------------------------------------------------
+
+Document 1236:
+
+    ************************************************************
+        Documents Most Similar To Document number 1236
+    ************************************************************
+    Similarity   Doc#  Author      Title
+    ==========   ==== ========     =============================
+
+    1.00000000   1236 Salton       #  The SMART Automatic Docume
+    0.34964867   634  Salton       #  Manipulation of Trees in I
+    0.34597470   1699 Rubinoff     #  Experimental Evaluation of
+    0.33443286   2711 Salton       #  A Vector Space Model for A
+    0.30466748   2307 Salton       #  Dynamic Document Processin
+    0.29321318   1457 Salton       #  Data Manipulation and Prog
+    0.27846346   2575 Van          #  The Best-Match Problem in
+    0.23596638   1681 Rubinoff     #  Easy English,a Language fo
+    0.23452847   2990 Yu
+    0.22243933   1032 Belzer       #  Theoretical Considerations
+    0.21164659   3012 Lucas        #  The Use of an Interactive
+    0.20297766   3134 Motzkin      #  The Use of Normal Multipli
+    0.17817230   2293 Jones        #  Comment on Average Binary
+    0.17473943   891  Whitley      #  Everyman's Information Ret
+    0.17473372   2140 Mullin       #  Retrieval-Update Speed Tra
+    0.16966675   1536 Lesk         #  Dynamic Computation of Der
+    0.16181630   1935 Arora        #  Randomized Binary Search T
+    0.16069564   1271 Davis        #  Secondary Key Retrieval Us
+    0.15522673   651  Grems        #  A Survey of Languages and
+    0.15416686   1680 Engvold      #  A General-Purpose Display
+    0.15371035   2157 Flores       #  Average Binary Search Leng
+
+-------------------------------------------------------------------------
+-------------------------------------------------------------------------
+
+Document 2740:
+
+    ************************************************************
+        Documents Most Similar To Document number 2740
+    ************************************************************
+    Similarity   Doc#  Author      Title
+    ==========   ==== ========     =============================
+
+    1.00000000   2740 Lauesen      #  A Large Semaphore Based Op
+    0.31220584   1749 Dijkstra     #  The Structure of the "THE"
+    0.28678909   2379 Liskov       #  The Design of the Venus Op
+    0.27573273   2597 Hoare        #  Monitors: An Operating Sys
+    0.27110686   3043 Hansen       #  Distributed Processes: A C
+    0.26309766   2700 Lipton       #  Reduction: A Method of Pro
+    0.25402067   2618 Lamport      #  A New Solution of Dijkstra
+    0.24791147   2376 Habermann    #  Synchronization of Communi
+    0.24362949   2866 Howard       #  Proving Monitors
+    0.23251400   2500 Frailey      #  A Practical Approach to Ma
+    0.22777228   2228 Holt         #  Comments on Prevention of
+    0.22437952   2920 Devillers    #  Game Interpretation of the
+    0.22230613   2280 Parnas       #  Comment on Deadlock Preven
+    0.22161063   3128 Reed         #  Synchronization with Event
+    0.21422805   1611 Klein        #  Scheduling Project Network
+    0.21073763   2482 Howard       #  Mixed Solutions for the De
+    0.19533083   2080 Hansen       #  The Nucleus of a Multiprog
+    0.19256609   2320 Hansen       #  Structured Multiprogrammin
+    0.18765270   2777 Parnas       #  On a Solution to the Cigar
+    0.18087734   2738 Parnas       #  Use of the Concept of Tran
+    0.17664884   2378 Gaines       #  An Operating System Based
