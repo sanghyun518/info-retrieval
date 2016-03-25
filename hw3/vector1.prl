@@ -1,0 +1,633 @@
+#!/usr/bin/perl -w
+
+use strict;
+
+use Carp;
+use FileHandle;
+
+##########################################################
+##  VECTOR1
+##
+##  Usage:   vector1     (no command line arguments)
+##
+##  The function &main_loop below gives the menu for the system.
+##
+##  This is an example program that shows how the core
+##  of a vector-based IR engine may be implemented in Perl.
+##
+##  Some of the functions below are unimplemented, and some
+##  are only partially implemented. Suggestions for additions
+##  are given below and in the assignment handout.
+##
+##  You should feel free to modify this program directly,
+##  and probably use this as a base for your implemented
+##  extensions.  As with all assignments, the range of
+##  possible enhancements is open ended and creativity
+##  is strongly encouraged.
+##########################################################
+
+
+############################################################
+## Program Defaults and Global Variables
+############################################################
+
+my $DIR  = ".";
+my $HOME = ".";
+
+my $token_docs = "";   # tokenized cacm journals
+my $corps_freq = "";   # frequency of each token in the journ.
+my $stoplist   = "";   # common uninteresting words
+my $titles     = "";   # titles of each article in cacm 
+
+# @doc_vector
+#
+#   An array of hashes, each array index indicating a particular document's
+#   weight "vector". 
+
+my @doc_vector = ( );
+
+# %docs_freq_hash
+#
+# associative array which holds <token, frequency> pairs where
+#
+#   token     = a particular word or tag found in the cacm corpus
+#   frequency = the total number of times the token appears in
+#               the corpus.
+
+my %docs_freq_hash = ( );    
+
+# %corp_freq_hash
+#
+# associative array which holds <token, frequency> pairs where
+#
+#   token     = a particular word or tag found in the corpus
+#   frequency = the total number of times the token appears per
+#               document-- that is a token is counted only once
+#               per document if it is present (even if it appears 
+#               several times within that document).
+
+my %corp_freq_hash = ( );
+
+# %stoplist_hash
+#
+# common list of uninteresting words which are likely irrelvant
+# to any query.
+#
+#   Note: this is an associative array to provide fast lookups
+#         of these boring words
+
+my %stoplist_hash  = ( );
+
+# @titles_vector
+#
+# vector of the cacm journal titles. Indexed in order of apperance
+# within the corpus.
+
+my @titles_vector  = ( );
+
+my @sensenum = ( );
+my %v_profile1 = ();
+my %v_profile2 = ();
+
+my $weighting_method = "expn";
+
+# start program
+
+&main_loop;
+
+##########################################################
+##  INIT_FILES
+##
+##  This function specifies the names and locations of
+##  input files used by the program. 
+##
+##  Parameters:  
+##   * $word ("plant" or "tank" or "perplace")
+##   * $type   ("stemmed" or "unstemmed")
+##
+##  If $type == "stemmed", the filenames are initialized
+##  to the versions stemmed with the Porter stemmer, while
+##  in the default ("unstemmed") case initializes to files
+##  containing raw, unstemmed tokens.
+##########################################################
+
+sub init_files {
+    my $word = shift;
+    
+    $token_docs = $DIR . "\/$word";
+    $corps_freq = $DIR . "\/$word";
+    $titles = $DIR . "\/$word\.titles";
+    
+    if ("stemmed" eq (shift || "")) {
+        $token_docs .= "\.stemmed";
+        $corps_freq .= "\.stemmed\.hist";
+    }
+    else {
+        $token_docs .= "\.tokenized";
+        $corps_freq .= "\.tokenized\.hist";
+    }
+}
+
+##########################################################
+##  INIT_STOPLIST
+##
+##  This function loads common words (stop list).
+##########################################################
+
+sub init_stoplist {
+	%stoplist_hash  = ( );
+	
+	$stoplist = $DIR . "\/common_words";
+	
+	if ("stemmed" eq (shift || "")) {
+		$stoplist   .= "\.stemmed";
+	}
+	
+    my $stoplist_fh   = new FileHandle $stoplist  , "r"
+	or croak "Failed $stoplist";
+	
+    my $line = undef;
+    
+    while (defined( $line = <$stoplist_fh> )) {
+
+        chomp $line;
+        $stoplist_hash{ $line } = 1;
+    }
+}
+
+##########################################################
+##  INIT_CORP_FREQ 
+##
+##  This function reads in corpus and document frequencies from
+##  the provided histogram file for both the document set
+##  and the query set. This information will be used in
+##  term weighting.
+##
+##  It also initializes the arrays representing the stoplist,
+##  title list and relevance of document given query.
+##########################################################
+
+sub init_corp_freq {
+	%docs_freq_hash = ( );
+	%corp_freq_hash = ( );
+	@titles_vector  = ( );
+
+    my $corps_freq_fh = new FileHandle $corps_freq, "r" 
+	or croak "Failed $corps_freq";
+	
+	my $titles_fh     = new FileHandle $titles    , "r"
+	or croak "Failed $titles";
+
+    my $line = undef;
+
+    while (defined( $line = <$corps_freq_fh> )) {
+
+	# so on my computer split will return a first element of undef 
+	# if the leading characters are white space, so I eat the white
+	# space to insure that the split works right.
+
+	my ($str) = ($line =~ /^\s*(\S.*)/);
+
+	my ($doc_freq,
+	    $cor_freq, 
+	    $term    ) = split /\s+/, $str;
+
+	$docs_freq_hash{ $term } = $doc_freq;
+	$corp_freq_hash{ $term } = $cor_freq;
+    }
+
+    push @titles_vector, "";       # push one empty value onto @titles_vector
+                                   # so that indices correspond with title
+                                   # numbers.
+
+    while (defined( $line = <$titles_fh> )) {
+
+	chomp $line;
+	push @titles_vector, $line;
+    }
+
+}
+
+##########################################################
+##  INIT_DOC_VECTORS
+##
+##  This function reads in tokens from the document file.
+##  When a .I token is encountered, indicating a document
+##  break, a new vector is begun. When individual terms
+##  are encountered, they are added to a running sum of
+##  term frequencies. To save time and space, it is possible
+##  to normalize these term frequencies by inverse document
+##  frequency (or whatever other weighting strategy is
+##  being used) while the terms are being summed or in
+##  a posthoc pass.  The 2D vector array 
+##
+##    $doc_vector[ $doc_num ]{ $term }
+##
+##  stores these normalized term weights.
+##
+##  It is possible to weight different regions of the document
+##  differently depending on likely importance to the classification.
+##  The relative base weighting factors can be set when 
+##  different segment boundaries are encountered.
+##
+##  This function is currently set up for simple TF weighting.
+##########################################################
+
+my @words = ();
+my @weights = ();
+
+sub init_doc_vectors {
+	@doc_vector = ( );
+
+    my $token_docs_fh = new FileHandle $token_docs, "r"
+	or croak "Failed $token_docs";
+
+    my $word    = undef;
+
+    my $doc_num =  0;    # current document number and total docs at end
+    my $tweight =  1;    # current weight assigned to document token
+
+    push @doc_vector, { };     # push one empty value onto @doc_vector so that
+                               # indices correspond with document numbers
+    push @sensenum, 0;
+    
+    @words = ();
+    @weights = ();
+    
+    my $sense = 0;
+
+    while (defined( $word = <$token_docs_fh> )) {
+
+        chomp $word;
+
+        if (($sense) = $word =~ /^\.I\s\d*\s(\d*)/) {     # indicates start of a new document
+        
+            if ($doc_num > 0) {
+            	
+                &compute_weights;
+                &separate_LR;
+                
+                for my $ind (0 .. scalar @words - 1) {
+                    $doc_vector[$doc_num]{$words[$ind]} += $weights[$ind];
+                }
+                
+            }
+            
+            @words = ();
+            @weights = ();
+
+            push @doc_vector, { };
+            push @sensenum, $sense;
+
+            $doc_num++;
+
+            next;
+        }
+        
+        if ($word =~ /[a-zA-Z]/ and ! exists $stoplist_hash{ $word }) {
+
+            if (defined( $docs_freq_hash{ $word } )) {
+            	push @words, $word;
+            	push @weights, 1;
+            }
+            else {
+                print "ERROR: Document frequency of zero: ", $word, "\n";
+            }
+        }
+    }
+    
+    &compute_weights;
+    &separate_LR;
+    
+    for my $ind (0 .. scalar @words - 1) {
+        $doc_vector[$doc_num]{$words[$ind]} += $weights[$ind];
+    }
+
+    # optionally normalize the raw term frequency
+    #
+    foreach my $hash (@doc_vector) {
+        foreach my $key (keys %{ $hash }) {
+        	if ($key =~ /^L\-/ || $key =~ /^R\-/) {
+        		$hash->{ $key } *= log( $doc_num / $docs_freq_hash{ substr $key, 2 });
+        	} else {
+        		$hash->{ $key } *= log( $doc_num / $docs_freq_hash{ $key });
+        	}
+        }
+    }
+
+    return $doc_num;
+}
+
+##########################################################
+## MAIN_LOOP
+##
+## Parameters: currently no explicit parameters.
+##             performance dictated by user imput.
+## 
+## Initializes document and query vectors using the
+## input files specified in &init_files. Then offers
+## a menu and switch to appropriate functions in an
+## endless loop.
+## 
+## Possible extensions at this level:  prompt the user
+## to specify additional system parameters, such as the
+## similarity function to be used.
+##
+## Currently, the key parameters to the system (stemmed/unstemmed,
+## stoplist/no-stoplist, term weighting functions, vector
+## similarity functions) are hardwired in.
+##
+## Initializing the document vectors is clearly the
+## most time consuming section of the program, as 213334 
+## to 258429 tokens must be processed, weighted and added
+## to dynamically growing vectors.
+## 
+##########################################################
+
+sub main_loop {
+	&init_stoplist;
+	
+    &run("tank");
+    &run("plant");
+    &run("perplace");
+}
+
+##########################################################
+##  RUN
+##
+##  Runs the experiments in various combinations.
+##########################################################
+
+sub run {
+	my $word = shift;
+	
+	&init_files($word);
+    &init_corp_freq;
+    &init_doc_vectors;
+    &init_average;
+    &classify;
+}
+
+##########################################################
+##  COMPUTE_WEIGHTS
+##
+##  Computes the weights for each "document".
+##########################################################
+
+sub compute_weights {
+	if ($weighting_method =~ /expn/) { 
+		&expndecay_weights;
+    } elsif ($weighting_method =~ /stepped/) {
+	    &stepped_weights;
+    } elsif ($weighting_method =~ /custom/) {
+    	&custom_weights;
+    } else {
+    	# uniform weights
+        # 'weights' are all 1 by default so do nothing here
+    }
+}
+
+##########################################################
+##  GET_AMB_WORD_IDX
+##
+##  Returns the index at which the ambiguous word occurs.
+##########################################################
+
+sub get_amb_word_idx {
+	my $amb_word_idx = 0;
+	
+	for my $idx (0 .. scalar @words - 1) {
+		if ($words[$idx] =~ /^\.X\-/) {
+			return $amb_word_idx;
+		} else {
+			$amb_word_idx++;
+		}
+	}
+	
+	return $amb_word_idx;
+}
+
+##########################################################
+##  EXPNDECAY_WEIGHTS
+##
+##  Computes the exponential decay weights.
+##########################################################
+
+sub expndecay_weights {
+	my $amb_word_idx = &get_amb_word_idx;
+    for my $idx (0 .. scalar @words - 1) {
+    	if ($idx == $amb_word_idx) {
+    		$weights[$idx] = 1;
+    		
+    	} else {
+    		$weights[$idx] = 1.0 / abs($idx - $amb_word_idx);
+    	}
+    }
+}
+
+##########################################################
+##  STEPPED_WEIGHTS
+##
+##  Computes the stepped weights.
+##########################################################
+
+sub stepped_weights {
+	my $amb_word_idx = &get_amb_word_idx;
+    for my $idx (0 .. scalar @words - 1) {
+    	my $diff = abs($idx - $amb_word_idx);
+    	if ($diff == 0) {
+    		$weights[$idx] = 1.0;
+    	} elsif ($diff == 1) {
+    		$weights[$idx] = 6.0;
+    	} elsif ($diff == 2 || $diff == 3) {
+    		$weights[$idx] = 3.0;
+    	} else {
+    		$weights[$idx] = 1.0;
+    	}
+    }
+}
+
+##########################################################
+##  CUSTOM_WEIGHTS
+##
+##  Computes custom defined weights.
+##########################################################
+
+sub custom_weights {
+	for my $ind (0 .. scalar @words - 1) {
+	}
+}
+
+##########################################################
+##  SEPARATE_LR
+##
+##  Local collocation modelling using adjacent separate LR
+##########################################################
+
+sub separate_LR {
+	my $amb_word_idx = &get_amb_word_idx;
+	if ($amb_word_idx > 0) {
+		my $word = $words[$amb_word_idx - 1];
+		$words[$amb_word_idx - 1] = "L-$word";
+	}
+	if ($amb_word_idx < scalar @words - 1) {
+		my $word = $words[$amb_word_idx + 1];
+		$words[$amb_word_idx + 1] = "R-$word";
+	}
+}
+
+##########################################################
+##  INIT_AVERAGE
+##
+##  Computes the average (centroid) of training vectors
+##########################################################
+
+sub init_average {
+	%v_profile1 = ();
+	%v_profile2 = ();
+	
+    &average(1, \%v_profile1);
+    &average(2, \%v_profile2);
+}
+
+##########################################################
+##  AVERAGE
+##
+##  Computes the average (centroid) of training vectors
+##########################################################
+
+sub average {
+	my $sense = shift;
+	my $profile = shift;
+	
+	my @docs = ();
+    
+    for (my $i = 1; $i <= 3600; $i++) {
+        if ($sensenum[$i] == $sense) {
+            push @docs, $doc_vector[$i];
+        }
+    }
+	
+	my $sum = 0;
+    
+	foreach my $hash (@docs) {
+        $sum = 0;
+        while (my ($key, $value) = each (%{$hash})) {
+            $sum += $value * $value;
+        }
+        $sum = sqrt($sum);
+        while (my ($key, $value) = each (%{$hash})) {
+        	$profile->{$key} += $value / $sum;
+        }
+    }
+    
+    my $num = scalar @docs;
+    
+    foreach my $key (keys %{$profile}) {
+    	$profile->{$key} /= $num
+    }
+}
+
+##########################################################
+##  CLASSIFY
+##
+##  Performs classification of 400 test data.
+##########################################################
+
+sub classify {
+    my $correct = 0;
+    
+    print << "EndOfList";
+   ************************************************************
+   Test Vectors Classification
+   ************************************************************
+   Sim1\t\tSim2\t\tSense\tSim Diff\tDoc#  Title
+   ====\t\t====\t\t=====\t========\t====  ===================
+EndOfList
+    ;
+    
+    for (my $ind = 3601; $ind <= 4000; $ind++) {
+        my $sim1 = &cosine_sim_a($doc_vector[$ind], \%v_profile1);
+        my $sim2 = &cosine_sim_a($doc_vector[$ind], \%v_profile2);
+
+        my $sense = $sim1 > $sim2 ? 1 : 2;
+        
+        if ($sense == $sensenum[$ind]) {
+            $correct++;
+            print " \+ "; 
+        } else {
+            print " \* ";
+        }
+        
+        my $title = substr $titles_vector[$ind], 0, 47;
+        print $sim1, "\t", $sim2, "\t", $sense, "\t", $sim1 - $sim2, "\t", $title, "\n";
+    }
+    
+    print "Accuracy on Test Data: ", $correct / 400, "\n";
+}
+
+########################################################
+## COSINE_SIM_A
+## 
+## Computes the cosine similarity for two vectors
+## represented as associate arrays.
+########################################################
+
+sub cosine_sim_a {
+
+    my $vec1 = shift;
+    my $vec2 = shift;
+
+    my $num     = 0;
+    my $sum_sq1 = 0;
+    my $sum_sq2 = 0;
+
+    my @val1 = values %{ $vec1 };
+    my @val2 = values %{ $vec2 };
+
+    # determine shortest length vector. This should speed 
+    # things up if one vector is considerable longer than
+    # the other (i.e. query vector to document vector).
+
+    if ((scalar @val1) > (scalar @val2)) {
+	my $tmp  = $vec1;
+	   $vec1 = $vec2;
+	   $vec2 = $tmp;
+    }
+
+    # calculate the cross product
+
+    my $key = undef;
+    my $val = undef;
+
+    while (($key, $val) = each %{ $vec1 }) {
+	$num += $val * ($$vec2{ $key } || 0);
+    }
+
+    # calculate the sum of squares
+
+    my $term = undef;
+
+    foreach $term (@val1) { $sum_sq1 += $term * $term; }
+    foreach $term (@val2) { $sum_sq2 += $term * $term; }
+
+    return &cosine_sim_b($num, $sum_sq1, $sum_sq2);
+}
+
+
+########################################################
+##  COSINE_SIM_B
+##  
+##  This function assumes that the sum of the squares
+##  of the term weights have been stored in advance for
+##  each document and are passed as arguments.
+########################################################
+
+sub cosine_sim_b {
+
+    my $num     = shift;
+    my $sum_sq1 = shift;
+    my $sum_sq2 = shift;
+
+    return ( $num / sqrt( $sum_sq1 * $sum_sq2 ));
+}
