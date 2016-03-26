@@ -751,8 +751,8 @@ sub classify {
     
     if ($option == 2) {
     print << "EndOfList";
-   Sim1\t\tSim2\t\tSense\tSim Diff\tTitle
-   ====\t\t====\t\t=====\t========\t===================
+   True Class\tPredicted Class\tSim Diff\tTitle
+   ====\t====\t========\t===================
 EndOfList
     ;
     }
@@ -765,18 +765,11 @@ EndOfList
         
         if ($sense == $sensenum[$ind]) {
             $correct++;
-            if ($option == 2) {
-                print " \+ ";
-            } 
-        } else {
-            if ($option == 2) {
-                print " \* ";
-            }
         }
         
         if ($option == 2) {
             my $title = substr $titles_vector[$ind], 0, 47;
-            print $sim1, "\t", $sim2, "\t", $sense, "\t", $sim1 - $sim2, "\t", $title, "\n";
+            print $sensenum[$ind], "\t", $sense, "\t", $sim1 - $sim2, "\t", $title, "\n";
         }
     }
     
@@ -833,13 +826,6 @@ EndOfList
         
         if ($sense == $sensenum[$ind]) {
             $correct++;
-            if ($option == 3) {
-                print " \+ ";
-            } 
-        } else {
-            if ($option == 3) {
-                print " \* ";
-            }
         }
         
         if ($option == 3) {
