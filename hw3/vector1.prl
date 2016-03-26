@@ -83,13 +83,25 @@ my %stoplist_hash  = ( );
 # vector of the cacm journal titles. Indexed in order of apperance
 # within the corpus.
 
-my @titles_vector  = ( );
+my @titles_vector  	= ( );
 
-my @sensenum = ( );
-my %v_profile1 = ();
-my %v_profile2 = ();
+my @sensenum 		= ( );
 
-my $weighting_method = "expn";
+my %v_profile1 		= ( );
+my %v_profile2 		= ( );
+my %v_sum1 			= ( );
+my %v_sum2 			= ( );
+
+my %LLike			= ( );
+
+my $tank_result  	= 0.0;
+my $plant_result  	= 0.0;
+my $pers_result  	= 0.0;
+
+my $stemming		= "stemmed";
+my $weighting 		= "expndecay";
+my $lc_modelling	= "bag-of-words";
+my $option 			= 1;
 
 # start program
 
@@ -118,7 +130,7 @@ sub init_files {
     $corps_freq = $DIR . "\/$word";
     $titles = $DIR . "\/$word\.titles";
     
-    if ("stemmed" eq (shift || "")) {
+    if ("stemmed" eq $stemming) {
         $token_docs .= "\.stemmed";
         $corps_freq .= "\.stemmed\.hist";
     }
@@ -265,7 +277,10 @@ sub init_doc_vectors {
             if ($doc_num > 0) {
             	
                 &compute_weights;
-                &separate_LR;
+                
+                if ($lc_modelling eq "adj-separate-LR") {
+                	&separate_LR;
+                }
                 
                 for my $ind (0 .. scalar @words - 1) {
                     $doc_vector[$doc_num]{$words[$ind]} += $weights[$ind];
@@ -297,7 +312,10 @@ sub init_doc_vectors {
     }
     
     &compute_weights;
-    &separate_LR;
+    
+    if ($lc_modelling eq "adj-separate-LR") {
+    	&separate_LR;
+    }
     
     for my $ind (0 .. scalar @words - 1) {
         $doc_vector[$doc_num]{$words[$ind]} += $weights[$ind];
@@ -305,6 +323,7 @@ sub init_doc_vectors {
 
     # optionally normalize the raw term frequency
     #
+    if (not ($weighting eq "bayes")) {
     foreach my $hash (@doc_vector) {
         foreach my $key (keys %{ $hash }) {
         	if ($key =~ /^L\-/ || $key =~ /^R\-/) {
@@ -313,6 +332,7 @@ sub init_doc_vectors {
         		$hash->{ $key } *= log( $doc_num / $docs_freq_hash{ $key });
         	}
         }
+    }
     }
 
     return $doc_num;
@@ -345,11 +365,142 @@ sub init_doc_vectors {
 ##########################################################
 
 sub main_loop {
+	print <<"EndOfMenu";
+
+	============================================================
+	==     Welcome to the 600.466 Vector-based IR Engine
+	============================================================
+
+	OPTIONS:
+	  1 = Tabular result of classification accuracies
+	  2 = Full list of classification results (stemmed/expndecay/bag-of-words)
+	  3 = Full list of classification results (simple Bayes model)
+	  4 = Quit
+
+	============================================================
+
+EndOfMenu
+    ;
+
+	print "Enter Option: ";
+
+	$option = <STDIN>;
+	chomp $option;
+
+	exit 0 if $option == 4;
+    
 	&init_stoplist;
 	
-    &run("tank");
-    &run("plant");
-    &run("perplace");
+	if (not ($option == 2) && not ($option == 3)) {
+		print << "EndOfList";
+
+                Position     Local Collocation                Accuracy
+    Stemming    Weighting    Modelling                tank    plant    pers/place
+    ===============================================================================
+
+EndOfList
+    ;
+	}
+	
+	if ($option == 2) {
+		&run("tank");
+        &run("plant");
+        &run("perplace");
+	} elsif ($option == 3) {
+		$stemming		= "stemmed";
+	    $weighting 		= "bayes";
+	    $lc_modelling	= "bag-of-words";
+	    
+		&run("tank");
+        &run("plant");
+        &run("perplace");
+	} else {
+	    $stemming		= "unstemmed";
+	    $weighting 		= "uniform";
+	    $lc_modelling	= "bag-of-words";
+	
+        &run("tank");
+        &run("plant");
+        &run("perplace");
+        
+        &print_result;
+        
+        $stemming		= "stemmed";
+	    $weighting 		= "expndecay";
+	    $lc_modelling	= "bag-of-words";
+	
+        &run("tank");
+        &run("plant");
+        &run("perplace");
+        
+        &print_result;
+        
+        $stemming		= "unstemmed";
+	    $weighting 		= "expndecay";
+	    $lc_modelling	= "bag-of-words";
+	
+        &run("tank");
+        &run("plant");
+        &run("perplace");
+        
+        &print_result;
+        
+        $stemming		= "unstemmed";
+	    $weighting 		= "expndecay";
+	    $lc_modelling	= "adj-separate-LR";
+	
+        &run("tank");
+        &run("plant");
+        &run("perplace");
+        
+        &print_result;
+        
+        $stemming		= "unstemmed";
+	    $weighting 		= "stepped";
+	    $lc_modelling	= "adj-separate-LR";
+	
+        &run("tank");
+        &run("plant");
+        &run("perplace");
+        
+        &print_result;
+        
+        $stemming		= "unstemmed";
+	    $weighting 		= "custom";
+	    $lc_modelling	= "adj-separate-LR";
+	
+        &run("tank");
+        &run("plant");
+        &run("perplace");
+        
+        &print_result;
+        
+        $stemming		= "stemmed";
+	    $weighting 		= "bayes";
+	    $lc_modelling	= "bag-of-words";
+	    
+	    &run("tank");
+        &run("plant");
+        &run("perplace");
+        
+        &print_result;
+	}
+}
+
+##########################################################
+##  PRINT_RESULT
+##
+##  Prints single line of result.
+##########################################################
+
+sub print_result {
+	printf( "    %-9s    %-9s    %-15s          %.2f    %.2f    %.2f\n", 
+	   $stemming,
+	   $weighting,
+	   $lc_modelling,
+	   $tank_result,
+	   $plant_result,
+	   $pers_result);
 }
 
 ##########################################################
@@ -364,8 +515,14 @@ sub run {
 	&init_files($word);
     &init_corp_freq;
     &init_doc_vectors;
-    &init_average;
-    &classify;
+    
+    if ($weighting =~ /bayes/) {
+    	&init_sum;
+    	&classify_bayes($word);
+    } else {
+    	&init_average;
+        &classify($word);
+    }
 }
 
 ##########################################################
@@ -375,11 +532,11 @@ sub run {
 ##########################################################
 
 sub compute_weights {
-	if ($weighting_method =~ /expn/) { 
+	if ($weighting =~ /expndecay/ || $weighting =~ /bayes/) { 
 		&expndecay_weights;
-    } elsif ($weighting_method =~ /stepped/) {
+    } elsif ($weighting =~ /stepped/) {
 	    &stepped_weights;
-    } elsif ($weighting_method =~ /custom/) {
+    } elsif ($weighting =~ /custom/) {
     	&custom_weights;
     } else {
     	# uniform weights
@@ -454,8 +611,19 @@ sub stepped_weights {
 ##########################################################
 
 sub custom_weights {
-	for my $ind (0 .. scalar @words - 1) {
-	}
+	my $amb_word_idx = &get_amb_word_idx;
+    for my $idx (0 .. scalar @words - 1) {
+    	my $diff = abs($idx - $amb_word_idx);
+    	if ($diff == 0) {
+    		$weights[$idx] = 1.0;
+    	} elsif ($diff == 1) {
+    		$weights[$idx] = 10.0;
+    	} elsif ($diff == 2 || $diff == 3 || $diff == 4) {
+    		$weights[$idx] = 3.0;
+    	} else {
+    		$weights[$idx] = 1.0;
+    	}
+    }
 }
 
 ##########################################################
@@ -479,24 +647,38 @@ sub separate_LR {
 ##########################################################
 ##  INIT_AVERAGE
 ##
-##  Computes the average (centroid) of training vectors
+##  Computes the average (centroid) vectors.
 ##########################################################
 
 sub init_average {
 	%v_profile1 = ();
 	%v_profile2 = ();
 	
-    &average(1, \%v_profile1);
-    &average(2, \%v_profile2);
+    &average_vectors(1, \%v_profile1);
+    &average_vectors(2, \%v_profile2);
 }
 
 ##########################################################
-##  AVERAGE
+##  INIT_SUM
+##
+##  Computes the sum of vectors.
+##########################################################
+
+sub init_sum {
+	%v_sum1 = ();
+	%v_sum2 = ();
+	
+    &sum_vectors(1, \%v_sum1);
+    &sum_vectors(2, \%v_sum2);
+}
+
+##########################################################
+##  AVERAGE_VECTORS
 ##
 ##  Computes the average (centroid) of training vectors
 ##########################################################
 
-sub average {
+sub average_vectors {
 	my $sense = shift;
 	my $profile = shift;
 	
@@ -529,22 +711,72 @@ sub average {
 }
 
 ##########################################################
+##  SUM_VECTORS
+##
+##  Computes the sum of vectors for each sense.
+##########################################################
+
+sub sum_vectors {
+	my $sense = shift;
+	my $profile = shift;
+	
+	my @docs = ();
+    
+    for (my $i = 1; $i <= 3600; $i++) {
+        if ($sensenum[$i] == $sense) {
+            push @docs, $doc_vector[$i];
+        }
+    }
+	
+	foreach my $hash (@docs) {
+        while (my ($key, $value) = each (%{$hash})) {
+        	$profile->{$key} += $value;
+        }
+    }
+}
+
+##########################################################
+##  LOG_LIKELIHOOD
+##
+##  Computes the log likelihood ratios for v_sum vectors.
+##########################################################
+
+sub log_likelihood {
+	my $EPSILON = 0.2;
+	
+	while (my ($term, $value) = each (%v_sum2)) {
+		if (exists $v_sum1{$term}) {
+			$LLike{$term} = log ( $v_sum1{$term} / $v_sum2{$term} ) 
+		} else {
+			$LLike{$term} = log ( $EPSILON / $v_sum2{$term} ) 
+		}
+	}
+	
+	while (my ($term, $value) = each (%v_sum1)) {
+		if (not (exists $v_sum2{$term})) {
+			$LLike{$term} = log ( $v_sum1{$term} / $EPSILON);
+		}
+	}
+}
+
+##########################################################
 ##  CLASSIFY
 ##
 ##  Performs classification of 400 test data.
 ##########################################################
 
 sub classify {
+	my $word = shift;
+	
     my $correct = 0;
     
+    if ($option == 2) {
     print << "EndOfList";
-   ************************************************************
-   Test Vectors Classification
-   ************************************************************
-   Sim1\t\tSim2\t\tSense\tSim Diff\tDoc#  Title
-   ====\t\t====\t\t=====\t========\t====  ===================
+   Sim1\t\tSim2\t\tSense\tSim Diff\tTitle
+   ====\t\t====\t\t=====\t========\t===================
 EndOfList
     ;
+    }
     
     for (my $ind = 3601; $ind <= 4000; $ind++) {
         my $sim1 = &cosine_sim_a($doc_vector[$ind], \%v_profile1);
@@ -554,16 +786,104 @@ EndOfList
         
         if ($sense == $sensenum[$ind]) {
             $correct++;
-            print " \+ "; 
+            if ($option == 2) {
+            	print " \+ ";
+            } 
         } else {
-            print " \* ";
+        	if ($option == 2) {
+        		print " \* ";
+        	}
         }
         
-        my $title = substr $titles_vector[$ind], 0, 47;
-        print $sim1, "\t", $sim2, "\t", $sense, "\t", $sim1 - $sim2, "\t", $title, "\n";
+        if ($option == 2) {
+        	my $title = substr $titles_vector[$ind], 0, 47;
+            print $sim1, "\t", $sim2, "\t", $sense, "\t", $sim1 - $sim2, "\t", $title, "\n";
+        }
     }
     
-    print "Accuracy on Test Data: ", $correct / 400, "\n";
+    my $accuracy = $correct / 400;
+    
+    if ($option == 1) {
+    	if ($word eq "tank") {
+    		$tank_result = $accuracy;
+    	} elsif ($word eq "plant") {
+    		$plant_result = $accuracy;
+    	} else {
+    		$pers_result = $accuracy;
+    	}
+    }
+    
+    if ($option == 2) {
+    	print "Accuracy on Test Data: ", $accuracy, "\n";
+    }
+}
+
+##########################################################
+##  CLASSIFY_BAYES
+##
+##  Performs classification of 400 test data using Bayes.
+##########################################################
+
+sub classify_bayes {
+	my $word = shift;
+	
+    my $correct = 0;
+    
+    if ($option == 3) {
+    print << "EndOfList";
+   True Class\tPredicted Class\tSum of LL\tTitle
+   ====\t====\t========\t===================
+EndOfList
+    ;
+    }
+    
+    &log_likelihood;
+    
+    my $sumofLL = 0;
+    
+    for (my $ind = 3601; $ind <= 4000; $ind++) {
+    	$sumofLL = 0;
+    	
+    	foreach my $hash ($doc_vector[$ind]) {
+    		while (my ($term, $value) = each (%{$hash})) {
+    			$sumofLL += (exists $LLike{$term} ? $LLike{$term} : 0) * $doc_vector[$ind]{$term};
+    		}
+    	}
+    	
+        my $sense = $sumofLL > 0 ? 1 : 2;
+        
+        if ($sense == $sensenum[$ind]) {
+            $correct++;
+            if ($option == 3) {
+            	print " \+ ";
+            } 
+        } else {
+        	if ($option == 3) {
+        		print " \* ";
+        	}
+        }
+        
+        if ($option == 3) {
+        	my $title = substr $titles_vector[$ind], 0, 47;
+            print $sensenum[$ind], "\t", $sense, "\t", $sumofLL, "\t", $title, "\n";
+        }
+    }
+    
+    my $accuracy = $correct / 400;
+    
+    if ($option == 1) {
+    	if ($word eq "tank") {
+    		$tank_result = $accuracy;
+    	} elsif ($word eq "plant") {
+    		$plant_result = $accuracy;
+    	} else {
+    		$pers_result = $accuracy;
+    	}
+    }
+    
+    if ($option == 3) {
+    	print "Accuracy on Test Data: ", $accuracy, "\n";
+    }
 }
 
 ########################################################
