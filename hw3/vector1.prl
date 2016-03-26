@@ -406,49 +406,49 @@ EndOfList
         &run_all_words;
     } elsif ($option == 3) {
         $stemming        = "stemmed";
-        $weighting         = "bayes";
+        $weighting       = "bayes";
         $lc_modelling    = "bag-of-words";
         
         &run_all_words;
     } else {
         $stemming        = "unstemmed";
-        $weighting         = "uniform";
+        $weighting       = "uniform";
         $lc_modelling    = "bag-of-words";
     
         &run_all_words; &print_result;
         
         $stemming        = "stemmed";
-        $weighting         = "expndecay";
+        $weighting       = "expndecay";
         $lc_modelling    = "bag-of-words";
     
         &run_all_words; &print_result;
         
         $stemming        = "unstemmed";
-        $weighting         = "expndecay";
+        $weighting       = "expndecay";
         $lc_modelling    = "bag-of-words";
     
         &run_all_words; &print_result;
         
         $stemming        = "unstemmed";
-        $weighting         = "expndecay";
+        $weighting       = "expndecay";
         $lc_modelling    = "adj-separate-LR";
     
         &run_all_words; &print_result;
         
         $stemming        = "unstemmed";
-        $weighting         = "stepped";
+        $weighting       = "stepped";
         $lc_modelling    = "adj-separate-LR";
     
         &run_all_words; &print_result;
         
         $stemming        = "unstemmed";
-        $weighting         = "custom";
+        $weighting       = "custom";
         $lc_modelling    = "adj-separate-LR";
     
         &run_all_words; &print_result;
         
         $stemming        = "stemmed";
-        $weighting         = "bayes";
+        $weighting       = "bayes";
         $lc_modelling    = "bag-of-words";
         
         &run_all_words; &print_result;
