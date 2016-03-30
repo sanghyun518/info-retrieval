@@ -661,32 +661,14 @@ sub average_vectors {
     my $sense = shift;
     my $profile = shift;
     
-    my @docs = ();
-    
-    for (my $i = 1; $i <= 3600; $i++) {
-        if ($sensenum[$i] == $sense) {
-            push @docs, $doc_vector[$i];
+    my $num = &sum_vectors($sense, $profile);
+
+    if (not ($weighting =~ /bayes/)) {    
+        foreach my $key (keys %{$profile}) {
+            $profile->{$key} /= $num
         }
     }
     
-    my $sum = 0;
-    
-    foreach my $hash (@docs) {
-        $sum = 0;
-        while (my ($key, $value) = each (%{$hash})) {
-            $sum += $value * $value;
-        }
-        $sum = sqrt($sum);
-        while (my ($key, $value) = each (%{$hash})) {
-            $profile->{$key} += $value / $sum;
-        }
-    }
-    
-    my $num = scalar @docs;
-    
-    foreach my $key (keys %{$profile}) {
-        $profile->{$key} /= $num
-    }
 }
 
 ##########################################################
@@ -712,6 +694,8 @@ sub sum_vectors {
             $profile->{$key} += $value;
         }
     }
+
+    return (scalar @docs);
 }
 
 ##########################################################
