@@ -596,9 +596,7 @@ sub custom_weights {
         if ($diff == 0) {
             $weights[$idx] = 1.0;
         } elsif ($diff == 1) {
-            $weights[$idx] = 10.0;
-        } elsif ($diff == 2 || $diff == 3 || $diff == 4) {
-            $weights[$idx] = 3.0;
+            $weights[$idx] = 100.0;
         } else {
             $weights[$idx] = 1.0;
         }
