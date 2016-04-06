@@ -32,6 +32,7 @@ $ua->from ( $ROBOT_MAIL );    # and give an email address in case anyone would
                               # like to complain
 
 my @images = ( );   # array to store found image links
+my @hrefs  = ( );   # array to store found 'href' links
 
 #
 # call back routine used by the HTML::LinkExtor object to parse passed
@@ -40,8 +41,8 @@ my @images = ( );   # array to store found image links
 
 sub call_back {
     my ( $tag    ,  # the <"TAG" ... > value parsed out 
-	 %attribs,  # the attribute which follow $tag
-	) = @_;
+     %attribs,  # the attribute which follow $tag
+    ) = @_;
     
     #
     # currently we only retrieve and parse "img" tags
@@ -51,8 +52,9 @@ sub call_back {
     #
 
     push @images, $attribs{ 'src' } if $tag eq "img";
+    push @hrefs, $attribs{ 'href' } if $tag eq "a";
 }
-	
+    
 my $extract = new HTML::LinkExtor( \&call_back );
 
 
@@ -69,9 +71,25 @@ my $extract = new HTML::LinkExtor( \&call_back );
 my $request  = new HTTP::Request 'GET' => "$ARGV[0]"; 
 my $response = $ua->request( $request, sub{ $extract->parse( $_[0] ) });
 my $base     = $response->base;
+my $url      = URI->new( "$ARGV[0]" );
+my $domain   = $url->host;
 
 # translate each link to a fully qualified URL
 
 @images = map { $_ = url($_, $base)->abs; } @images;
+@hrefs  = map { $_ = url($_, $base)->abs; } @hrefs;
+
+for ( my $idx = 0 ; $idx < scalar @hrefs ; $idx++ ) {
+    # self-referencing links
+    if (index($hrefs[$idx], "$base#") > 0) {
+        splice @hrefs, $idx, 1;
+    }
+
+    # non-local links
+    if (index($hrefs[$idx], "$domain") < 0) {
+        splice @hrefs, $idx, 1;
+    }
+}
 
 print join "\n", @images, "\n";
+print join "\n", @hrefs, "\n";
