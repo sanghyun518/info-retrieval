@@ -87,6 +87,7 @@ push @search_urls, $base_url;
 
 while (@search_urls) {
     my $url = shift @search_urls;
+    my $domain   = URI->new( $url )->host;
 
     #
     # insure that the URL is well-formed, otherwise skip it
@@ -97,7 +98,7 @@ while (@search_urls) {
 
     next if $@;
     next if $parsed_url->scheme !~/http/i;
-	
+    
     #
     # get header information on URL to see it's status (exis-
     # tant, accessible, etc.) and content type. If the status
@@ -109,9 +110,11 @@ while (@search_urls) {
 
     my $request  = new HTTP::Request HEAD => $url;
     my $response = $robot->request( $request );
-	
+    
     next if $response->code != RC_OK;
     next if ! &wanted_content( $response->content_type );
+
+    push @wanted_urls, $url;
 
     print LOG "[GET  ] $url\n";
 
@@ -125,20 +128,20 @@ while (@search_urls) {
 
     &extract_content ($response->content, $url);
 
-    my @related_urls  = &grab_urls( $response->content );
+    my @related_urls  = &grab_urls( $response->content, $url, $domain );
 
     foreach my $link (@related_urls) {
 
-	my $full_url = eval { (new URI::URL $link, $response->base)->abs; };
-	    
-	delete $relevance{ $link } and next if $@;
+    my $full_url = eval { (new URI::URL $link, $response->base)->abs; };
+        
+    delete $relevance{ $link } and next if $@;
 
-	$relevance{ $full_url } = $relevance{ $link };
-	delete $relevance{ $link } if $full_url ne $link;
+    $relevance{ $full_url } = $relevance{ $link };
+    delete $relevance{ $link } if $full_url ne $link;
 
-	push @search_urls, $full_url and $pushed{ $full_url } = 1
-	    if ! exists $pushed{ $full_url };
-	
+    push @search_urls, $full_url and $pushed{ $full_url } = 1
+        if ! exists $pushed{ $full_url };
+    
     }
 
     #
@@ -147,7 +150,7 @@ while (@search_urls) {
     #
 
     @search_urls = 
-	sort { $relevance{ $a } <=> $relevance{ $b }; } @search_urls;
+    sort { $relevance{ $a } <=> $relevance{ $b }; } @search_urls;
 
 }
 
@@ -159,7 +162,6 @@ exit (0);
 #
 # wanted_content
 #
-#    UNIMPLEMENTED
 #
 #  this function should check to see if the current URL content
 #  is something which is either
@@ -175,17 +177,12 @@ exit (0);
 sub wanted_content {
     my $content = shift;
 
-    # right now we only accept text/html
-    #  and this requires only a *very* simple set of additions
-    #
-
-    return $content =~ m@text/html@;
+    return $content =~ m@text/html@ || $content =~ m@application/postscript@ || $content =~ m@application/pdf@;
 }
 
 #
 # extract_content
 #
-#    UNIMPLEMENTED
 #
 #  this function should read through the context of all the text/html
 #  documents retrieved by the web robot and extract three types of
@@ -197,15 +194,34 @@ sub extract_content {
 
     my $email;
     my $phone;
+    my $city;
 
     # parse out information you want
     # print it in the tuple format to the CONTENT and LOG files, for example:
 
-    print CONTENT "($url; EMAIL; $email)\n";
-    print LOG "($url; EMAIL; $email)\n";
+    my @emails = $content =~ s/(\w+@\w+\.\w+(\.\w+){0,1})//;
 
-    print CONTENT "($url; PHONE; $phone)\n";
-    print LOG "($url; PHONE; $phone)\n";
+    foreach $email (@emails) {
+        print $email;
+        print CONTENT "($url; EMAIL; $email)\n";
+        print LOG "($url; EMAIL; $email)\n";
+    }
+
+    my @phones = $content =~ s/\D((\d{3}){0,1}(\(\d{3}\)){0,1}\D\d{3}\D\d{4})\D//;
+
+    foreach $phone (@phones) {
+        print $phone;
+        print CONTENT "($url; PHONE; $phone)\n";
+        print LOG "($url; PHONE; $phone)\n";
+    }
+
+    my @cities = $content =~ s/([A-Za-z]+,{0,1}\s[A-Za-z]+,{0,1}\s\d{5}(.\d{4}){0,1})//;
+
+    foreach $city (@cities) {
+        print $city;
+        print CONTENT "($url; CITY; $city)\n";
+        print LOG "($url; CITY; $city)\n";
+    }
 
     return;
 }
@@ -247,41 +263,47 @@ sub extract_content {
 
 sub grab_urls {
     my $content = shift;
+    my $base    = shift;
+    my $domain  = shift;
     my %urls    = ();    # NOTE: this is an associative array so that we only
                          #       push the same "href" value once.
 
     
   skip:
     while ($content =~ s/<\s*[aA] ([^>]*)>\s*(?:<[^>]*>)*(?:([^<]*)(?:<[^aA>]*>)*<\/\s*[aA]\s*>)?//) {
-	    
-	my $tag_text = $1;
-	my $reg_text = $2;
-	my $link = "";
+        
+    my $tag_text = $1;
+    my $reg_text = $2;
+    my $link = "";
 
-	if (defined $reg_text) {
-	    $reg_text =~ s/[\n\r]/ /;
-	    $reg_text =~ s/\s{2,}/ /;
+    if (defined $reg_text) {
+        $reg_text =~ s/[\n\r]/ /;
+        $reg_text =~ s/\s{2,}/ /;
 
-	    #
-	    # compute some relevancy function here
-	    #
-	}
+        #
+        # compute some relevancy function here
+        #
+    }
 
-	if ($tag_text =~ /href\s*=\s*(?:["']([^"']*)["']|([^\s])*)/i) {
-	    $link = $1 || $2;
+    if ($tag_text =~ /href\s*=\s*(?:["']([^"']*)["']|([^\s])*)/i) {
+        $link = $1 || $2;
 
-	    #
-	    # okay, the same link may occur more than once in a
-	    # document, but currently I only consider the last
-	    # instance of a particular link
-	    #
+        #
+        # okay, the same link may occur more than once in a
+        # document, but currently I only consider the last
+        # instance of a particular link
+        #
 
-	    $relevance{ $link } = 1;
-	    $urls{ $link }      = 1;
-	}
+        if (index($link, "$base#") > 0) { next; } # self-referencing links
 
-	print $reg_text, "\n" if defined $reg_text;
-	print $link, "\n\n";
+        if (index($link, "$domain") < 0) { next; } # non-local links
+
+        $relevance{ $link } = 1;
+        $urls{ $link }      = 1;
+    }
+
+    print $reg_text, "\n" if defined $reg_text;
+    print $link, "\n\n";
     }
 
     return keys %urls;   # the keys of the associative array hold all the
