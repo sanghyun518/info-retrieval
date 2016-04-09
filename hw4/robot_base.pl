@@ -73,6 +73,7 @@ my $ROBOT_MAIL = 'yourlogin@cs.jhu.edu';
 #
 
 my $robot = new LWP::RobotUA $ROBOT_NAME, $ROBOT_MAIL;
+$robot->delay( 0.05 ); # 60 * 0.05 = 3 seconds delay
 
 my $base_url    = shift(@ARGV);   # the root URL we will start from
 
@@ -199,29 +200,37 @@ sub extract_content {
     # parse out information you want
     # print it in the tuple format to the CONTENT and LOG files, for example:
 
-    my @emails = $content =~ s/(\w+@\w+\.\w+(\.\w+){0,1})//;
+    my @emails = $content =~ /(\w+@\w+\.\w+(\.\w+){0,1})/g;
 
     foreach $email (@emails) {
-        print $email;
-        print CONTENT "($url; EMAIL; $email)\n";
-        print LOG "($url; EMAIL; $email)\n";
+        if (defined $email) {
+            print "EMAIL: $email\n";
+            print CONTENT "($url; EMAIL; $email)\n";
+            print LOG "($url; EMAIL; $email)\n";
+        }
     }
 
-    my @phones = $content =~ s/\D((\d{3}){0,1}(\(\d{3}\)){0,1}\D\d{3}\D\d{4})\D//;
+    my @phones = $content =~ /.[0-9][0-9][0-9].+[0-9][0-9][0-9].+[0-9][0-9][0-9][0-9]/g;
 
     foreach $phone (@phones) {
-        print $phone;
-        print CONTENT "($url; PHONE; $phone)\n";
-        print LOG "($url; PHONE; $phone)\n";
+        if (defined $phone) {
+            print "PHONE: $phone\n";
+            print CONTENT "($url; PHONE; $phone)\n";
+            print LOG "($url; PHONE; $phone)\n";
+        }
     }
 
-    my @cities = $content =~ s/([A-Za-z]+,{0,1}\s[A-Za-z]+,{0,1}\s\d{5}(.\d{4}){0,1})//;
+    my @cities = $content =~ /([A-Za-z]+,{0,1}\s[A-Za-z]+,{0,1}\s\d{5}(.\d{4}){0,1})/g;
 
     foreach $city (@cities) {
-        print $city;
-        print CONTENT "($url; CITY; $city)\n";
-        print LOG "($url; CITY; $city)\n";
+        if (defined $city) {
+            print "CITY: $city\n";
+            print CONTENT "($url; CITY; $city)\n";
+            print LOG "($url; CITY; $city)\n";
+        }
     }
+
+    print "\n";
 
     return;
 }
@@ -229,7 +238,6 @@ sub extract_content {
 #
 # grab_urls
 #
-#    PARTIALLY IMPLEMENTED
 #
 #   this function parses through the content of a passed HTML page and
 #   picks out all links and any immediately related text.
@@ -298,7 +306,7 @@ sub grab_urls {
 
         if (index($link, "$domain") < 0) { next; } # non-local links
 
-        $relevance{ $link } = 1;
+        $relevance{ $link } = &relevance( $link, $reg_text );
         $urls{ $link }      = 1;
     }
 
@@ -308,4 +316,23 @@ sub grab_urls {
 
     return keys %urls;   # the keys of the associative array hold all the
                          # links we've found (no repeats).
+}
+
+#
+# relevance
+#
+#   returns how relevant the given link is based on certain keywords 
+#   highly related to the information we want (i.e. emails, phone numbers, etc.)
+#
+
+sub relevance {
+    my $link = shift;
+    my $text = shift;
+
+    if (index($link, "contact") > 0 or index($link, "people") > 0 or index($link, "about") > 0) {
+        return 1;
+    }
+
+    return 2;
+
 }

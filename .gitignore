@@ -22,4 +22,5 @@ nytprof.out
 *.arff
 *.class
 /hw2/VectorIR/bin/
-
+content.txt
+mylogfile.log
