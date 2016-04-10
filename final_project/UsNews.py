@@ -32,12 +32,12 @@ def getTop20(industry) :
 	print url
 	print industry.lower(), ":"
 	html_content = requests.get(url).text
-	soup = BeautifulSoup(html_content)
+	soup = BeautifulSoup(html_content, "lxml")
 	school_names = soup.find_all(True, {"class":"school-name"})
 	school_locations = soup.find_all(True, {"class" : "location"})
 	school_tuitions = soup.find_all("td", class_=re.compile("search_tuition[\_a-zA-Z]*"))
 	for i in range (len(school_names)) :
-		print school_names[i].text.encode("utf-8","ignore"), "|", school_locations[i].text.encode("utf-8","ignore"), "|", school_tuitions[i].text.encode("utf-8","ignore").strip()
+		print i+1, school_names[i].text.encode("utf-8","ignore"), "|", school_locations[i].text.encode("utf-8","ignore"), "|", school_tuitions[i].text.encode("utf-8","ignore").strip()
 	print
 	 		
 def main() :
