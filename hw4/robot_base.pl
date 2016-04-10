@@ -200,18 +200,18 @@ sub extract_content {
     # parse out information you want
     # print it in the tuple format to the CONTENT and LOG files, for example:
 
-    my @emails = $content =~ /(\w+@\w+\.\w+(\.\w+){0,1})/g;
-
+    # my @emails = $content =~ /(\w+@\w+\.\w+(\.\w+){0,1})/g;
+    my @emails = $content =~ /(\w+@\w+(\.\w+)+)/g;
     foreach $email (@emails) {
-        if (defined $email) {
+        if (defined $email and $email !~ /(^\.)/ and $email !~ m/\.png/) {
             print "EMAIL: $email\n";
             print CONTENT "($url; EMAIL; $email)\n";
             print LOG "($url; EMAIL; $email)\n";
         }
     }
 
-    my @phones = $content =~ /.[0-9][0-9][0-9].+[0-9][0-9][0-9].+[0-9][0-9][0-9][0-9]/g;
-
+    # my @phones = $content =~ /.[0-9][0-9][0-9].+[0-9][0-9][0-9].+[0-9][0-9][0-9][0-9]/g;
+    my @phones = $content =~ /([(]?[0-9][0-9][0-9][)]?[\-\s][0-9][0-9][0-9][\-\s][0-9][0-9][0-9][0-9])/g;
     foreach $phone (@phones) {
         if (defined $phone) {
             print "PHONE: $phone\n";
