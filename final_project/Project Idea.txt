@@ -1,0 +1,32 @@
+<Project Idea/Proposal>
+Team Members : Hyun Joon Cho , Sanghyun Choi
+Project Idea : "Graduate School Suits me"
+
+Abstract / Motivation : 
+At JHU, there are a great number of people who want to pursue their career in the area of academia. The first step for doing so is by getting into a graduate school and finding the program that suits me the best. However, we have discovered that there are a limited amount of resources or none to find information of the graduate program, brief idea of specifications or qualifications for getting into those, and source to reach out to current students or professors at specific program at one step. So in order to resolve this inconvenience, we have decided to create one by starting with Top 20(or 5) schools based on US News Report per six different fields of studies such as Business, Education, Engineering, Law, Medicine, and Nursing. Our program will have following features described below.
+
+Feature :
+At a glance there are total of three features in our program.
+
+First is "Search schools by my specification". This feature askes a user for his/her academic data such as Major/Interest in field of study, GPA, GRE or other test scores, and etc. Then the program will provide the best matching programs/schools after comparing the user¡¯s input and our data set from credible sources where each candidates posts their own academic records and reviews. Then after the user receives, X(possibly 3 bestmatches?) number of schools that matches him/her, by entering its index(or school name), the user can receive the contact information of current students and possibly admissions office for continuing research or application process.
+
+Second is "Search by location or tuition range". This feature asks a user for his/her preferred location or range of tuition that a user has in his/her mind. Then the program will provide the list of schools if applicable or a message to inform the user that ¡°There is not good match for your queries. Please try another input.¡± User can either choose to limit their queries by search for only location, or only tuition range, or both location and tuition range. After the user receives the results, same as above, the user will be able to choose the choice of school by entering its index (or school_name) and contact information for its current students and admissions office will be provided.
+
+Third is "Search by School". This feature is for the students who already has a list of schools that they want to apply but want to know sources to reach out or apply properly. When a user chooses this option, the user will be asked to enter the field of study that the user is interested in. Then the user will be given the list of Top 20( or X number) schools in the particular area of user¡¯s choice. The result is sorted by the order of ranking. Then from this list of schools, the user can choose a school that he/she wants to reach out by entering index( of school name), the program will provide the contact information in similar format that is described above.
+
+NOTE:
+This is still a tentative idea and can be always changed and modified any time.
+
+
+
+Status on Research : 
+* Currently scripts for finding top 20 schools from 
+http://grad-schools.usnews.rankingsandreviews.com/best-graduate-schools is ready. (for now it is written in python but can be implemented in java without a huge change in code.) 
+The only problem is that for some reason, currently I can only grab or crawl Top 5 schools per each category(Top 5 from Businees, Top 5 from Education, Top 5 from Engineering, and similar for the Law, Medicine, and Nursing). Still working on it to find out if there is an alternative method that can give us Top 20 results.
+
+* Will start looking at Go Hackers Webpage
+http://www.gohackers.com/?c=prepare/prepare_info/admission and start gathering some information.
+
+* Once we have the list of 20 schools for each field of study, we can start to get contact information for 3~5 currently enrolled students and admissions office.
+
+
