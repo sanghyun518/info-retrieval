@@ -22,7 +22,10 @@ This is still a tentative idea and can be always changed and modified any time.
 Status on Research : 
 * Currently scripts for finding top 20 schools from 
 http://grad-schools.usnews.rankingsandreviews.com/best-graduate-schools is ready. (for now it is written in python but can be implemented in java without a huge change in code.) 
-The only problem is that for some reason, currently I can only grab or crawl Top 5 schools per each category(Top 5 from Businees, Top 5 from Education, Top 5 from Engineering, and similar for the Law, Medicine, and Nursing). Still working on it to find out if there is an alternative method that can give us Top 20 results.
+==> The only problem is that for some reason, currently I can only grab or crawl Top 5 schools per each category(Top 5 from Businees, Top 5 from Education, Top 5 from Engineering, and similar for the Law, Medicine, and Nursing). Still working on it to find out if there is an 
+alternative method that can give us Top 20 results. (modified/fixed?)
+==> The problem above only happens when I am running the program on my computer. I found out that it works fine when I run it on putty(UNIX).
+
 
 * Will start looking at Go Hackers Webpage
 http://www.gohackers.com/?c=prepare/prepare_info/admission and start gathering some information.
