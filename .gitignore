@@ -24,3 +24,5 @@ nytprof.out
 /hw2/VectorIR/bin/
 content.txt
 mylogfile.log
+/final_project/.idea/
+*.pyc
