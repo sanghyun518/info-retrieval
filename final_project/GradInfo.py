@@ -61,11 +61,16 @@ while True:
     elif input == 3:
         # Get query parameters from user
         school = None
+        major  = None
         degree = None
 
         while not school or school.strip() == '':
             print "    Enter school name:"
             school = raw_input()
+
+        while not major or major.strip() == '':
+            print "    Enter major:"
+            major = raw_input()
 
         while not degree or degree.strip() == '':
             print "    Enter degree:"
@@ -75,6 +80,7 @@ while True:
         query = dict()
         query[QueryUtil.schoolKey] = school
         query[QueryUtil.degreeKey] = degree
+        query[QueryUtil.majorKey]  = major
 
         # Print results from different sites
         print "GradCafe Results:\n"
