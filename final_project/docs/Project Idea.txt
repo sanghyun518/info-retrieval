@@ -14,6 +14,15 @@ Second is "Search by location or tuition range". This feature asks a user for hi
 
 Third is "Search by School". This feature is for the students who already has a list of schools that they want to apply but want to know sources to reach out or apply properly. When a user chooses this option, the user will be asked to enter the field of study that the user is interested in. Then the user will be given the list of Top 20( or X number) schools in the particular area of user¡¯s choice. The result is sorted by the order of ranking. Then from this list of schools, the user can choose a school that he/she wants to reach out by entering index( of school name), the program will provide the contact information in similar format that is described above.
 
+Challenges :
+* Deal with all the different structures of data in various websites.
+* Translate (possibly using an open-source API) different languages into English before displaying data from non-English website.
+* Leverage multiple sources of data to extract insight and provide advice to users (e.g. a crude estimation of user's chance of admission based on his/her current background). 
+
+Values :
+* [As far as we know] There is no other website that serves this purpose (i.e. viewing graduate school information from multiple sources in a single system).
+* Based on the features described above, we may be able to provide automated advice for choosing schools.
+
 NOTE:
 This is still a tentative idea and can be always changed and modified any time.
 
