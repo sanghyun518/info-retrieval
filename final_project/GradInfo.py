@@ -86,6 +86,8 @@ while True:
         print "GradCafe Results:\n"
         GradCafe.getResults(query)
 
+        print "\n\n"
+
         print "GoHackers Results:\n"
         GoHackers.getResults(query)
 
