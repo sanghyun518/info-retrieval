@@ -82,6 +82,8 @@ while True:
         query[QueryUtil.degreeKey] = degree
         query[QueryUtil.majorKey]  = major
 
+        print "\n\n"
+
         # Print results from different sites
         print "GradCafe Results:\n"
         GradCafe.getResults(query)
