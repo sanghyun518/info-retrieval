@@ -1,6 +1,8 @@
 """
 The main script for gathering various graduate school information.
 """
+import FacultyInfo
+import StudentInfo
 import GoHackers
 import GradCafe
 import QueryUtil
@@ -12,6 +14,36 @@ def continueQuery():
     input = raw_input()
     return not input or input.lower() == 'y'
 
+# Returns a dictionary of query parameters
+def getQuery(needSchool, needMajor, needDegree):
+    # Get query parameters from user
+    school = ''
+    major = ''
+    degree = ''
+
+    if needSchool:
+        while not school or school.strip() == '':
+            print "    Enter school name:"
+            school = raw_input()
+
+    if needMajor:
+        while not major or major.strip() == '':
+            print "    Enter major:"
+            major = raw_input()
+
+    if needDegree:
+        while not degree or degree.strip() == '':
+            print "    Enter degree:"
+            degree = raw_input()
+
+    # Create dictionary of query parameters
+    query = dict()
+    query[QueryUtil.schoolKey] = school
+    query[QueryUtil.degreeKey] = degree
+    query[QueryUtil.majorKey] = major
+
+    return query
+
 # Main loop
 while True:
     print "    ============================================================"
@@ -19,15 +51,17 @@ while True:
     print "    ============================================================"
     print ""
     print "    OPTIONS:"
-    print "      1 = Find top 20 schools for specified area"
-    print "      2 = Find schools in certain location"
-    print "      3 = View admission history for specified school"
-    print "      4 = Quit"
+    print "      1 = View top schools for specified area"
+    print "      2 = View faculty members for specified school(s)"
+    print "      3 = View current students for specified school(s)"
+    print "      4 = View admission history for specified school"
+    print "      5 = Predict chance of admission for specified school"
+    print "      6 = Quit"
     print ""
     print "    ============================================================"
 
     input = raw_input()
-    input = int(input) if input.isdigit() else 4
+    input = int(input) if input.isdigit() else 6
 
     if input == 1:
         # Create options
@@ -57,30 +91,26 @@ while True:
         else:
             break
     elif input == 2:
-        break
+        # Get query from user
+        query = getQuery(True, True, False)
+
+        # Print list of faculty members
+        FacultyInfo.getResults(query)
+
+        if not continueQuery():
+            break
     elif input == 3:
-        # Get query parameters from user
-        school = None
-        major  = None
-        degree = None
+        # Get query from user
+        query = getQuery(True, True, False)
 
-        while not school or school.strip() == '':
-            print "    Enter school name:"
-            school = raw_input()
+        # Print list of students
+        StudentInfo.getResults(query)
 
-        while not major or major.strip() == '':
-            print "    Enter major:"
-            major = raw_input()
-
-        while not degree or degree.strip() == '':
-            print "    Enter degree:"
-            degree = raw_input()
-
-        # Create dictionary of query parameters
-        query = dict()
-        query[QueryUtil.schoolKey] = school
-        query[QueryUtil.degreeKey] = degree
-        query[QueryUtil.majorKey]  = major
+        if not continueQuery():
+            break
+    elif input == 4:
+        # Get query from user
+        query = getQuery(True, True, True)
 
         print "\n\n"
 
@@ -93,6 +123,10 @@ while True:
         print "GoHackers Results:\n"
         GoHackers.getResults(query)
 
+        if not continueQuery():
+            break
+    elif input == 5:
+        # Display machine learning results
         if not continueQuery():
             break
     else:
