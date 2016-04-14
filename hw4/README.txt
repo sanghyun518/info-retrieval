@@ -1,3 +1,7 @@
+TEAM MEMBERS: 
+* Sanghyun Choi (schoi60)
+* Hyun Joon Cho (hcho34)
+
 Part 1.
 
 Modified 'lwp_parser_two.pl' such that it checks the following criteria:
