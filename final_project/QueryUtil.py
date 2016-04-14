@@ -35,3 +35,19 @@ def normalizeGre(score):
 def normalizeGpa(achievedGpa, maxPossibleGpa):
     return float(achievedGpa) / float(maxPossibleGpa)
 
+# Searches text for given keywords
+def searchKeywords(text, negativeKeywords, positiveKeywords):
+    text = text.lower()
+
+    # Immediately return if there is a negative keyword
+    for negativeKeyword in negativeKeywords:
+        if negativeKeyword in text:
+            return 0
+
+    # Now search for positive keywords
+    for positiveKeyword in positiveKeywords:
+        if positiveKeyword in text:
+            return 1
+
+    return 0
+

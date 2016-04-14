@@ -30,12 +30,14 @@ def getResults(query, doPrint):
     header  = list()
     results = list()
 
+    featureVectors = list() # Vectors to be used for machine learning
+
     table = soup.find('table')
 
     if not table:
         if doPrint:
-            print "Could not find information based on given query"
-        return
+            print "Total : 0 posts"
+        return None
 
     rows = table.find_all('tr')
     for i in range(len(rows)):
@@ -92,16 +94,45 @@ def getResults(query, doPrint):
             header.extend(colTexts)
         else:
             # Data
+
+            # 1. Add feature vector
+            gre = re.match(r'([0-9]+)/([0-9]+)/([0-9.]+)', greScore)
+
+            featureVector = dict()
+            featureVector[QueryUtil.gpaScore]   = float(gpaScore)
+            featureVector[QueryUtil.greVerbal]  = float(gre.group(1))
+            featureVector[QueryUtil.greQuant]   = float(gre.group(2))
+            featureVector[QueryUtil.greWriting] = float(gre.group(3))
+            featureVector[QueryUtil.workExp]    = hasWorkExperience(colTexts[4])
+            featureVector[QueryUtil.research]   = hasResearchExperience(colTexts[4])
+            featureVector[QueryUtil.status]     = 0 if 'A' == colTexts[2] else 1
+
+            featureVectors.append(featureVector)
+
+            # 2. Add data for display
             colTexts.insert(0, greScore)
             colTexts.insert(0, gpaScore)
             results.append(colTexts)
 
-    if len(results) == 0:
-        if doPrint:
-            print "Could not find information based on given query"
-        return
+    print "Total : " + str(len(results)) + " posts\n"
 
     # Use 'pandas' library for neat tabular representation
     if doPrint:
         pandas.set_option('display.width', 1000)
         print pandas.DataFrame(results, columns=header, index=range(len(results)))
+
+    return featureVectors
+
+# Checks whether keywords related to work experience exist it the 'Notes' section
+def hasWorkExperience(notes):
+    negativeKeywords = [ 'no work', 'no industry' ]
+    positiveKeywords = ['work', 'industry']
+
+    return QueryUtil.searchKeywords(notes, negativeKeywords, positiveKeywords)
+
+# Checks whether keywords related to research experience exist it the 'Notes' section
+def hasResearchExperience(notes):
+    negativeKeywords = ['no research', 'no publi']
+    positiveKeywords = [ 'research', 'publish', 'publication', 'paper', 'academic', 'author', 'conference' ]
+
+    return QueryUtil.searchKeywords(notes, negativeKeywords, positiveKeywords)
