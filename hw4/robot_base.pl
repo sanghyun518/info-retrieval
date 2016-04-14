@@ -329,6 +329,8 @@ sub relevance {
     my $link = shift;
     my $text = shift;
 
+    # If the link contains keywords such as 'contact', 'people' and 'about', then there is a
+    # high chance that there are emails, phone numbers, and addresses.
     if (index($link, "contact") > 0 or index($link, "people") > 0 or index($link, "about") > 0) {
         return 1;
     }
