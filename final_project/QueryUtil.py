@@ -18,6 +18,10 @@ workExp    = 'workExp'    # 1 if there is work experience, otherwise 0
 research   = 'research'   # 1 if there is research experience (or published papers), otherwise 0
 status     = 'status'     # 1 if international student, otherwise 0
 
+# Additional keys that can be used later
+decision   = 'decision'   # 1 if acceted from the school, otherwise 0
+postId     = 'postId'     # post Id to check for unusual data such as all '0' gre_scores or gpaScore 
+
 # Normalizes GRE V/Q scores to account for different versions
 def normalizeGre(score):
     if score > 200:
