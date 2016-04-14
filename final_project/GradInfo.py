@@ -121,7 +121,7 @@ while True:
         print "\n\n"
 
         print "GoHackers Results:\n"
-        GoHackers.getResults(query)
+        GoHackers.getResults(query, True)
 
         if not continueQuery():
             break

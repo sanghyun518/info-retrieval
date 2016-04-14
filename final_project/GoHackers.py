@@ -7,24 +7,25 @@ import QueryUtil
 from bs4 import BeautifulSoup
 import pandas
 
+########################################################################################################################
 # The parameter 'query' is a dictionary of query information,
 # for example, { 'school' : 'Johns Hopkins', 'degree' : 'PhD' }
-# This function requires a query with format specified as above
+# This function inputs a query with format specified as above and boolean value doPrint as an indicator to print or not 
 # and reuturns the list of results in dictionary format with keys that are written in QueyUtil.py 
 # for example, { 'decision': 1, 'greVerbal': 500, 'greQuant': 700, 'greWriting': 4.0, 'gpaScore':3.5/4.0 and etc}
-
+########################################################################################################################
 # Note to concern: 
 # 1. Display format ex. decision, workExp, researchExp instead of 1, 
 #    want to display Accepted/Rejected or True/False in the future.
-# 2. Note that it may take a significantly long time depending on the number of posts to look for.
+# 2. Note that it may take a significantly long time depending on the number of posts to look for. (apprx. 2.4 sec per post)
 # 3. Number of results can be decreased if query is complex. (ex. school name & non-popular major & phd)
 #    Almost less than 5 or None
 # 4. There are some special cases where user did not followed the format as the others write the post.
 #    For example, id='content_5' mostly contains GRE or Test Scores, but rarely some people put it in id='content_1'/
 #    In this case, the scores are stated as 0. 
 # 5. Improvements can be made to handle special cases, date of notice. 
-
-def getResults(query) :
+######################################################################################################################
+def getResults(query, doPrint) :
     # Base url
     base_url = "http://www.gohackers.com"
 
@@ -34,42 +35,64 @@ def getResults(query) :
         url = url + query[QueryUtil.schoolKey].lower() + "%26%26" + query[QueryUtil.majorKey].lower() + "%26%26ph.d"
     else :
         url = url + query[QueryUtil.schoolKey].lower() + "%26%26" + query[QueryUtil.majorKey].lower() + "%26%26" + query[QueryUtil.degreeKey].lower()
-    url = url + "&recnum=140"
 
-    # Get HTML Result
-    html_content = requests.get(url).text
-    soup = BeautifulSoup(html_content, "lxml")
 
-    # Start scraping posts by searching for subjects
-    post_subjects = soup.find_all("td", class_="sbj")
-    results = list()  
-    print "Total : " + str(len(post_subjects) - 5) + " posts"
-    for subject in post_subjects :
 
-        # Check if the post is a Notice or Ads
-        if subject.a.b == None :
-            a = subject.find("a", href=True)
+    # Initialize tot_page that indicates total pages
+    tot_pages = 1
 
-            # Get Result from each post 
-            result = getResult(base_url+a['href'], query[QueryUtil.schoolKey].lower())
-            results.append(result)
-        print ">>",
+    # If not need to print, get actual total number of pages
+    if not doPrint :
+        tot_pages = getTotalPageNum(url)
+
+    # A list to store result from each post
+    results = list() 
+
+    for i in range (1, tot_pages+1) :
+        if doPrint :                         # Update page number until it searches all pages
+            url += "&recnum=15&p=" + str(i)  # Also give different limit of number of posts to check 
+        else :                               # depending on doPrint flag
+            url += "&recnum=70&p=" + str(i)
+      
+        # Get post subjects
+        post_subjects = getPostSubjects(url)
+
+        if doPrint :
+            print "Total : " + str(len(post_subjects)-5) + " posts"    
+
+        # Get result from each post in one page
+        for subject in post_subjects :
+
+            # Check if the post is a Notice or Ads
+            if subject.a.b == None :
+                a = subject.find("a", href=True)
+
+                # Get Result from each post 
+                result = getResult(base_url+a['href'], query[QueryUtil.schoolKey].lower())
+                results.append(result)
+                print ">>",
     print 
 
-    if len(results) > 0 :
-        # Use 'pandas' library for neat tabular representation
-        pandas.set_option('display.width', 1000)
+    if doPrint:
+        if len(results) > 0 :
+            # Use 'pandas' library for neat tabular representation
+            pandas.set_option('display.width', 1000)
 
-        # Print only the first 15 results
-        print pandas.DataFrame(results[0:15])
+            # Print only the first 15 results
+            print pandas.DataFrame(results[0:15])
+        else :
+            "Could not find any result that matches to given query."
+
     return results
 
-
+###############################################################
 # Helper function to retrieve information from each post
 # This function requires a single url that leads to a post
-# and returns the results from its post such as "decision(accepted/rejected)", "GRE or Test Scores", and etc.
+# and returns the results from its post such as 
+# "decision(accepted/rejected)", "GRE or Test Scores", and etc.
+###############################################################
 def getResult(url, schoolName) :
-   
+
     # Get HTML result form a post
     html_content = requests.get(url).text    
     soup = BeautifulSoup(html_content, "lxml")
@@ -153,3 +176,43 @@ def getResult(url, schoolName) :
 
     # print result
     return result
+
+#####################################################################################
+# Helper function for getResults. 
+# This function requires a url and computes the total number of pages that can cover
+# the entire list of results that was retrieved.
+#####################################################################################
+def getTotalPageNum(url) :
+    url += "&recnum=1"
+    post_subjects = getPostSubjects(url)
+
+    # Find the number of the total results
+    tot_num = 0
+    for subject in post_subjects :
+        if subject.a.b == None :
+            tr_tag = subject.parent
+            tot_num = int(tr_tag.find("td").text)
+            print "Total : " + str(tot_num) + " posts"    
+            break
+
+    tot_pages = tot_num / 70
+    
+    if (tot_num % 70 != 0) :
+        tot_pages += 1
+    
+    return tot_pages
+
+#################################################################################
+# Helper function.
+# This function inputs a url and outputs html component that contains all subject 
+# of posts in the given url.
+#################################################################################
+def getPostSubjects(url) :
+    # Get HTML Text
+    html_content = requests.get(url).text
+    soup = BeautifulSoup(html_content, "lxml")
+
+    # Start scraping posts by searching for subjects
+    post_subjects = soup.find_all("td", class_="sbj")
+
+    return post_subjects
