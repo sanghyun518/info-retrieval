@@ -15,9 +15,11 @@ def getResults(query, doPrint):
     major  = query[QueryUtil.majorKey]
     degree = query[QueryUtil.degreeKey]
 
+    numPages = 100 if doPrint else 1000
+
     # Construct URL with query parameters
     queryStr = re.sub(r"\s+", '+', school + " " + major)
-    url = "http://thegradcafe.com/survey/index.php?q=" + queryStr + "&t=a&o=&pp=100"
+    url = "http://thegradcafe.com/survey/index.php?q=" + queryStr + "&t=a&o=&pp=" + str(numPages)
 
     # Get HTML result
     html_content = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}).text
@@ -37,37 +39,67 @@ def getResults(query, doPrint):
 
     rows = table.find_all('tr')
     for i in range(len(rows)):
-        row = rows[i]
-        cols = row.find_all('td')
-        cols = [col.text.strip() for col in cols]
+        cols = rows[i].find_all('td')
+        colTexts = [col.text.strip() for col in cols]
 
         validResult = True
 
-        for j in range(len(cols)):
-            col = cols[j]
+        gpaScore = None
+        greScore = None
 
-            if (i > 0 and j == 1 and degree.lower() not in col.lower()):
-                validResult = False
-                break
-            if (i > 0 and j == 2):
-                if 'Accepted' in col:
-                    cols[j] = 'Accepted'
-                elif 'Rejected' in col:
-                    cols[j] = 'Rejected'
-                else:
+        for j in range(len(colTexts)):
+            colText = colTexts[j]
+
+            if i > 0: # Non-header data
+                if j == 1 and degree.lower() not in colText.lower():
                     validResult = False
                     break
+                if j == 2:
+                    if 'Accepted' in colText:
+                        colTexts[j] = 'Accepted'
+                    elif 'Rejected' in colText:
+                        colTexts[j] = 'Rejected'
+                    else:
+                        validResult = False
+                        break
+
+                    scoresInfo = cols[j].find('a')
+
+                    if scoresInfo:
+                        match = re.match(r'.*GPA.*\s([0-9]\.[0-9]{2}).*', scoresInfo.text)
+                        gpaScore = match.group(1) if match else None
+
+                        match = re.match(r'.*GRE\s+General.+([0-9]{3}\/[0-9]{3}\/[0-9.]+).*', scoresInfo.text)
+                        greScore = match.group(1) if match else None
+
+                        if gpaScore is None or greScore is None:
+                            validResult = False
+                            break
+                    else:
+                        validResult = False
+                        break
 
         if not validResult:
             continue
 
-        cols = cols[1:] # Do not show 'institution'
+        colTexts = colTexts[1:] # Do not show 'institution'
 
         if i == 0:
-            cols[1] = 'Decision'
-            header.extend(cols)
+            # Header
+            colTexts[1] = 'Decision'
+            colTexts.insert(0, 'GRE')
+            colTexts.insert(0, 'GPA')
+            header.extend(colTexts)
         else:
-            results.append(cols)
+            # Data
+            colTexts.insert(0, greScore)
+            colTexts.insert(0, gpaScore)
+            results.append(colTexts)
+
+    if len(results) == 0:
+        if doPrint:
+            print "Could not find information based on given query"
+        return
 
     # Use 'pandas' library for neat tabular representation
     if doPrint:
