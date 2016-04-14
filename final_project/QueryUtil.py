@@ -2,6 +2,8 @@
 Contains common constants and functions useful for querying data
 """
 
+import requests
+
 # Query keys
 
 schoolKey = 'school'
@@ -50,4 +52,11 @@ def searchKeywords(text, negativeKeywords, positiveKeywords):
             return 1
 
     return 0
+
+def google(query):
+    link = 'http://ajax.googleapis.com/ajax/services/search/web?v=1.0&%s' % query
+    ua = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.116 Safari/537.36'}
+    payload = {'q': query}
+    response = requests.get(link, headers=ua, params=payload)
+    return response.text
 

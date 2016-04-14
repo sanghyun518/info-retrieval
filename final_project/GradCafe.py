@@ -125,7 +125,7 @@ def getResults(query, doPrint):
 
 # Checks whether keywords related to work experience exist it the 'Notes' section
 def hasWorkExperience(notes):
-    negativeKeywords = [ 'no work', 'no industry' ]
+    negativeKeywords = ['no work', 'no industry']
     positiveKeywords = ['work', 'industry']
 
     return QueryUtil.searchKeywords(notes, negativeKeywords, positiveKeywords)
