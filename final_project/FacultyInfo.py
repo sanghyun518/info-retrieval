@@ -13,8 +13,6 @@ from bs4 import BeautifulSoup
 # The parameter 'query' is a dictionary of query information,
 # for example, { 'school' : 'Johns Hopkins', 'degree' : 'PhD' }
 def getResults(query):
-    header = {'User-Agent': 'Mozilla/5.0'}
-
     school = query[QueryUtil.schoolKey]
     major = query[QueryUtil.majorKey]
 
@@ -36,38 +34,78 @@ def getResults(query):
 
     # Start scraping if a link to the faculty page has been found
 
+    counter = 0
+
     if facultyLink:
+        visitedUrls = dict() # Keeps track of visited urls
+
         # Get all links within faculty page
-        content = requests.get(str(facultyLink), headers=header).text
+        content = requests.get(str(facultyLink), headers={'User-Agent': 'Mozilla/5.0'}).text
         soup = BeautifulSoup(content, "lxml")
-        refs = soup.find_all("a", href=True)
 
-        if refs:
+        # Remove header and footer since these are definitely not relevant
+        if soup.header:
+            soup.header.decompose()
+        if soup.footer:
+            soup.footer.decompose()
+
+        anchors = soup.find_all("a", href=True)
+
+        if anchors:
             # Visit each link to see if there is information about a faculty member
-            for ref in refs:
-                url = ref['href']
-                if url.startswith('http') and not url.endswith('.edu') and not url.endswith('.edu/'):
+            for anchor in anchors:
+                url = anchor['href']
+
+                if len(anchor.text.strip()) == 0:
+                    continue
+
+                if url in visitedUrls:
+                    continue
+
+                visitedUrls[url] = 0
+
+                if validUrl(url):
                     try:
-                        content = requests.get(ref['href'], headers=header).text
+                        content = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}).text
                         soup = BeautifulSoup(content, "lxml")
-                        links = soup.find_all("a", href=True)
 
-                        # Check if the content contains certain keywords related to faculty member's homepage
-                        isValid = False
+                        if validContent(soup):
+                            match = re.search(r'>(.+\S+\s+(research|holds|received|area|director|member|fellow|earned)[^<]+)', content)
 
-                        if links:
-                            for link in links:
-                                for keyword in [ 'teaching', 'publication', 'CV' ]:
-                                    if keyword == link.text.lower().strip():
-                                        isValid = True
-                                        break
-                                if isValid:
-                                    break
-
-                        if isValid or 'Research Interest' in content:
-                            print url
+                            if match:
+                                counter = counter + 1
+                                print str(counter) + '. ' + anchor.text
+                                print removeTags(match.group(1))
+                                print '\n'
                     except:
                         continue
 
-    print ''
+    if counter == 0:
+        print 'Could not find information...\n'
 
+# Pre-screening of URLs that definitely would not contain information about faculty member
+def validUrl(url):
+    if url.endswith('.edu') or url.endswith('.edu/'):
+        return False
+    if not url.startswith('http'):
+        return False
+    return True
+
+# Check if the content contains certain keywords related to faculty member's homepage
+def validContent(soup):
+    anchors = soup.find_all("a", href=True)
+
+    if anchors:
+        for anchor in anchors:
+            for keyword in ['teaching', 'publication', 'cv', 'curriculum vitae']:
+                if keyword == anchor.text.lower().strip():
+                    return True
+
+    return False
+
+# Removes HTML related tags in given string
+def removeTags(str):
+    soup = BeautifulSoup('<p>' + str + '<p>', "lxml")
+    for tag in soup.find_all(True):
+        tag.replaceWith(tag.text)
+    return soup.renderContents()
