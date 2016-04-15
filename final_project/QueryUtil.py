@@ -21,8 +21,8 @@ research   = 'research'   # 1 if there is research experience (or published pape
 status     = 'status'     # 1 if international student, otherwise 0
 
 # Additional keys that can be used later
-decision   = 'decision'   # 1 if acceted from the school, otherwise 0
-postId     = 'postId'     # post Id to check for unusual data such as all '0' gre_scores or gpaScore 
+decision   = 'decision'   # 1 if accepted from the school, otherwise 0
+postId     = 'postId'     # post Id to check for unusual data such as all '0' gre_scores or gpaScore
 
 # Normalizes GRE V/Q scores to account for different versions
 def normalizeGre(score):

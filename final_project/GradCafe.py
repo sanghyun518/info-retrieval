@@ -99,6 +99,7 @@ def getResults(query, doPrint):
             gre = re.match(r'([0-9]+)/([0-9]+)/([0-9.]+)', greScore)
 
             featureVector = dict()
+            featureVector[QueryUtil.decision]   = 1 if 'Accepted' == colTexts[1] else 0
             featureVector[QueryUtil.gpaScore]   = float(gpaScore)
             featureVector[QueryUtil.greVerbal]  = float(gre.group(1))
             featureVector[QueryUtil.greQuant]   = float(gre.group(2))
