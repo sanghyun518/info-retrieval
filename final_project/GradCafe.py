@@ -135,14 +135,14 @@ def getResult(degree, featureVectors, header, results, soup, doPrint):
             gre = re.match(r'([0-9]+)/([0-9]+)/([0-9.]+)', greScore)
 
             featureVector = dict()
-            featureVector[QueryUtil.decision] = 1 if 'Accepted' == colTexts[1] else 0
-            featureVector[QueryUtil.gpaScore] = float(gpaScore)
-            featureVector[QueryUtil.greVerbal] = float(gre.group(1))
-            featureVector[QueryUtil.greQuant] = float(gre.group(2))
+            featureVector[QueryUtil.decision]   = 1 if 'Accepted' == colTexts[1] else 0
+            featureVector[QueryUtil.gpaScore]   = float(gpaScore)
+            featureVector[QueryUtil.greVerbal]  = float(gre.group(1))
+            featureVector[QueryUtil.greQuant]   = float(gre.group(2))
             featureVector[QueryUtil.greWriting] = float(gre.group(3))
-            featureVector[QueryUtil.workExp] = hasWorkExperience(colTexts[4])
-            featureVector[QueryUtil.research] = hasResearchExperience(colTexts[4])
-            featureVector[QueryUtil.status] = 0 if 'A' == colTexts[2] else 1
+            featureVector[QueryUtil.workExp]    = hasWorkExperience(colTexts[4])
+            featureVector[QueryUtil.research]   = hasResearchExperience(colTexts[4])
+            featureVector[QueryUtil.status]     = 0 if 'A' == colTexts[2] else 1
 
             featureVectors.append(featureVector)
 

@@ -122,7 +122,7 @@ class Predictor:
                 if j > 3:
                     result.append(int(self.testingData[i,j]))
                 else:
-                    result.append('{:.2f}'.format(self.testingData[i, j]))
+                    result.append('{:.2f}'.format(self.testingData[i,j]))
 
             result.append(int(self.testingLabels[i][0]))
             result.append(int(predictedLabels[i]))
