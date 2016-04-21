@@ -7,6 +7,7 @@ import pandas
 import QueryUtil
 
 from sklearn import neighbors
+from sklearn import decomposition
 
 class Predictor:
 
@@ -16,7 +17,7 @@ class Predictor:
         self.dimension = 8
 
         # Pre-process the data to create full training/testing data
-        data = self.preprocess(gradResults, goResults)
+        data = self.preProcess(gradResults, goResults)
 
         # Partition the data into training and testing
         numTraining = int(0.8 * data.shape[0])
@@ -25,12 +26,14 @@ class Predictor:
         self.trainingLabels = data[0:numTraining,self.dimension-1:]
         self.testingLabels  = data[numTraining:,self.dimension-1:]
 
+        # Perform PCA for dimensionality reduction
+        self.performPCA(3)
+
         # Fit the machine learning model
-        self.model = neighbors.KNeighborsClassifier(4, weights='distance')
-        self.model.fit(self.trainingData, self.trainingLabels.reshape((numTraining,)))
+        self.fit(5)
 
     # Returns structured data to be used in machine learning library
-    def preprocess(self, gradResults, goResults):
+    def preProcess(self, gradResults, goResults):
         data = np.ndarray(shape=(self.dimension, 0), dtype=np.float)
 
         for results in [gradResults, goResults]:
@@ -98,17 +101,24 @@ class Predictor:
 
         return data
 
+    # Perform PCA on training data for dimensionality reduction
+    def performPCA(self, numComponents):
+        self.pca = decomposition.PCA(n_components=numComponents)
+        self.pca.fit(self.trainingData)
+
+    # Fit the ML model based on acquired training data
+    def fit(self, numNeighbors):
+        numTraining = self.trainingData.shape[0]
+        self.model = neighbors.KNeighborsClassifier(numNeighbors, weights='distance')
+        self.model.fit(self.pca.transform(self.trainingData), self.trainingLabels.reshape((numTraining,)))
+
     # Perform prediction on held-out test data
-    def predict(self):
-        predictedLabels = self.model.predict(self.testingData)
+    def predict(self, doPrint):
+        predictedLabels = self.model.predict(self.pca.transform(self.testingData))
 
         numTraining = self.trainingData.shape[0]
         numTests = self.testingLabels.shape[0]
         numCorrect = 0
-
-        print "\n\nClassification using k-Nearest Neighbors"
-        print "Number of Training Data: {}".format(numTraining)
-        print "Number of Testing Data: {}".format(numTests)
 
         results = list()
 
@@ -129,7 +139,16 @@ class Predictor:
 
             results.append(result)
 
-        print 'Accuracy: {:.2f} ({}/{})'.format(float(numCorrect) / float(numTests), numCorrect, numTests)
+        accuracy = float(numCorrect) / float(numTests)
+
+        if not doPrint:
+            return accuracy
+
+        print "\n\nClassification using k-Nearest Neighbors"
+        print "Number of Training Data: {}".format(numTraining)
+        print "Number of Testing Data: {}".format(numTests)
+
+        print 'Accuracy: {:.2f} ({}/{})'.format(accuracy, numCorrect, numTests)
         print 'Details:'
 
         header = ['GPA', 'GRE(V)', 'GRE(Q)', 'GRE(W)', 'Work Exp.', 'Research Exp.', 'Status', 'Decision', 'Predicted']
@@ -137,3 +156,27 @@ class Predictor:
         pandas.set_option('display.width', 1000)
         print pandas.DataFrame(results, columns=header, index=range(len(results)))
         print '\n\n'
+
+    # Runs experiment to fit the model using various combination of parameters
+    def runExperiment(self):
+        numTraining = self.trainingData.shape[0]
+
+        results = list()
+
+        for i in range(1, self.dimension-1, 2):
+            self.performPCA(i)
+            for j in range(1, int(numTraining / 3), 2):
+                self.fit(j)
+                accuracy = self.predict(False)
+
+                result = list()
+                result.append(i)
+                result.append(j)
+                result.append('{:.2f}'.format(accuracy))
+
+                results.append(result)
+
+        header = [ 'Num. Dimensions', 'Num. Neighbors', 'Accuracy' ]
+
+        pandas.set_option('display.width', 1000)
+        print pandas.DataFrame(results, columns=header, index=range(len(results)))

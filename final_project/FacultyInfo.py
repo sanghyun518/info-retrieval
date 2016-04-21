@@ -4,7 +4,6 @@ Scrapes school official website for a list of faculty members and their research
 
 import re
 import requests
-import pandas
 import json
 import QueryUtil
 

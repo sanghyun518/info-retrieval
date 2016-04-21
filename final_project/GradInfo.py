@@ -144,8 +144,14 @@ while True:
         goResults = GoHackers.getResults(query, False)
 
         # Predict outcome
+        doExperiment = False
+
         predictor = Predictor(gradResults, goResults)
-        predictor.predict()
+
+        if doExperiment:
+            predictor.runExperiment()
+        else:
+            predictor.predict(True)
 
         if not continueQuery():
             break
