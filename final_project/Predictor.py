@@ -108,12 +108,13 @@ class Predictor:
         self.pca = decomposition.PCA(n_components=numComponents)
         self.pca.fit(self.trainingData)
 
-    # Fit the ML model based on acquired training data
+    # Fit k-NN model based on acquired training data
     def fitKnn(self, numNeighbors):
         numTraining = self.trainingData.shape[0]
         self.knn = neighbors.KNeighborsClassifier(numNeighbors, weights='distance')
         self.knn.fit(self.pca.transform(self.trainingData), self.trainingLabels.reshape((numTraining,)))
 
+    # Fit SVM model based on acquired training data
     def fitSvm(self, gamma):
         numTraining = self.trainingData.shape[0]
         self.svm = svm.SVC(decision_function_shape='ovo',kernel='rbf',gamma=gamma,C=1000)
