@@ -3,3 +3,6 @@ Required Libraries:
   * requests
   * requests[security]
   * pandas
+  * numpy
+  * scipy
+  * scikit-learn
