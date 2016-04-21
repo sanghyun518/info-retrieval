@@ -8,6 +8,8 @@ import GradCafe
 import QueryUtil
 import UsNews
 
+from Predictor import Predictor
+
 # Ask user if he/she wants to initiate another query
 def continueQuery():
     print "Continue with another query [y/n, default: y]:"
@@ -127,6 +129,24 @@ while True:
             break
     elif input == 5:
         # Display machine learning results
+
+        # Get query from user
+        query = getQuery(True, True, True)
+
+        print "\n"
+
+        # Get results from GradCafe
+        gradResults = GradCafe.getResults(query, False)
+
+        QueryUtil.refineQuery(query)
+
+        # Get results from GoHackers
+        goResults = GoHackers.getResults(query, False)
+
+        # Predict outcome
+        predictor = Predictor(gradResults, goResults)
+        predictor.predict()
+
         if not continueQuery():
             break
     else:

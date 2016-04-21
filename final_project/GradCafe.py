@@ -15,23 +15,55 @@ def getResults(query, doPrint):
     major  = query[QueryUtil.majorKey]
     degree = query[QueryUtil.degreeKey]
 
-    numPages = 100 if doPrint else 1000
+    numResults = 100 if doPrint else 250
 
     # Construct URL with query parameters
     queryStr = re.sub(r"\s+", '+', school + " " + major)
-    url = "http://thegradcafe.com/survey/index.php?q=" + queryStr + "&t=a&o=&pp=" + str(numPages)
+    url = "http://thegradcafe.com/survey/index.php?q=" + queryStr + "&t=a&o=&pp=" + str(numResults)
 
     # Get HTML result
     html_content = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}).text
     soup = BeautifulSoup(html_content, "lxml")
 
+    # Find total number of pages
+    div = soup.find("div", {"class": "pagination"})
+    anchors = div.find_all("a", href=True)
+    numPages = len(anchors) + 1
+
     # Start scraping data from table
 
-    header  = list()
-    results = list()
+    header   = list()
+    results  = list()
+    features = list()  # Vectors to be used for machine learning
 
-    featureVectors = list() # Vectors to be used for machine learning
+    # Get results for first page
+    getResult(degree, features, header, results, soup, doPrint)
 
+    currentPage = numPages + 1 if doPrint else 2
+
+    # Get results for next pages
+    while currentPage <= numPages:
+        url = "http://thegradcafe.com/survey/index.php?q=" + queryStr + "&t=a&pp=" + str(numResults) + "&o=&p=" + str(currentPage)
+
+        # Get HTML result
+        html_content = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}).text
+        soup = BeautifulSoup(html_content, "lxml")
+
+        getResult(degree, features, None, results, soup, doPrint)
+
+        currentPage = currentPage + 1
+
+    print "Total : " + str(len(results)) + " posts\n"
+
+    # Use 'pandas' library for neat tabular representation
+    if doPrint:
+        pandas.set_option('display.width', 1000)
+        print pandas.DataFrame(results, columns=header, index=range(len(results)))
+
+    return features
+
+# Scrapes results for a single page
+def getResult(degree, featureVectors, header, results, soup, doPrint):
     table = soup.find('table')
 
     if not table:
@@ -52,7 +84,7 @@ def getResults(query, doPrint):
         for j in range(len(colTexts)):
             colText = colTexts[j]
 
-            if i > 0: # Non-header data
+            if i > 0:  # Non-header data
                 if j == 1 and degree.lower() not in colText.lower():
                     validResult = False
                     break
@@ -84,14 +116,18 @@ def getResults(query, doPrint):
         if not validResult:
             continue
 
-        colTexts = colTexts[1:] # Do not show 'institution'
+        if gpaScore is None or greScore is None:
+            continue
+
+        colTexts = colTexts[1:]  # Do not show 'institution'
 
         if i == 0:
-            # Header
-            colTexts[1] = 'Decision'
-            colTexts.insert(0, 'GRE')
-            colTexts.insert(0, 'GPA')
-            header.extend(colTexts)
+            if header:
+                # Header
+                colTexts[1] = 'Decision'
+                colTexts.insert(0, 'GRE')
+                colTexts.insert(0, 'GPA')
+                header.extend(colTexts)
         else:
             # Data
 
@@ -99,14 +135,14 @@ def getResults(query, doPrint):
             gre = re.match(r'([0-9]+)/([0-9]+)/([0-9.]+)', greScore)
 
             featureVector = dict()
-            featureVector[QueryUtil.decision]   = 1 if 'Accepted' == colTexts[1] else 0
-            featureVector[QueryUtil.gpaScore]   = float(gpaScore)
-            featureVector[QueryUtil.greVerbal]  = float(gre.group(1))
-            featureVector[QueryUtil.greQuant]   = float(gre.group(2))
+            featureVector[QueryUtil.decision] = 1 if 'Accepted' == colTexts[1] else 0
+            featureVector[QueryUtil.gpaScore] = float(gpaScore)
+            featureVector[QueryUtil.greVerbal] = float(gre.group(1))
+            featureVector[QueryUtil.greQuant] = float(gre.group(2))
             featureVector[QueryUtil.greWriting] = float(gre.group(3))
-            featureVector[QueryUtil.workExp]    = hasWorkExperience(colTexts[4])
-            featureVector[QueryUtil.research]   = hasResearchExperience(colTexts[4])
-            featureVector[QueryUtil.status]     = 0 if 'A' == colTexts[2] else 1
+            featureVector[QueryUtil.workExp] = hasWorkExperience(colTexts[4])
+            featureVector[QueryUtil.research] = hasResearchExperience(colTexts[4])
+            featureVector[QueryUtil.status] = 0 if 'A' == colTexts[2] else 1
 
             featureVectors.append(featureVector)
 
@@ -114,15 +150,6 @@ def getResults(query, doPrint):
             colTexts.insert(0, greScore)
             colTexts.insert(0, gpaScore)
             results.append(colTexts)
-
-    print "Total : " + str(len(results)) + " posts\n"
-
-    # Use 'pandas' library for neat tabular representation
-    if doPrint:
-        pandas.set_option('display.width', 1000)
-        print pandas.DataFrame(results, columns=header, index=range(len(results)))
-
-    return featureVectors
 
 # Checks whether keywords related to work experience exist it the 'Notes' section
 def hasWorkExperience(notes):
