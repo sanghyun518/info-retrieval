@@ -151,7 +151,7 @@ while True:
         if doExperiment:
             predictor.runExperiment()
         else:
-            predictor.predict(True)
+            predictor.predict()
 
         if not continueQuery():
             break

@@ -6,6 +6,7 @@ import numpy as np
 import pandas
 import QueryUtil
 
+from sklearn import svm
 from sklearn import neighbors
 from sklearn import decomposition
 
@@ -27,10 +28,11 @@ class Predictor:
         self.testingLabels  = data[numTraining:,self.dimension-1:]
 
         # Perform PCA for dimensionality reduction
-        self.performPCA(3)
+        self.performPCA(5)
 
         # Fit the machine learning model
-        self.fit(5)
+        self.fitKnn(5)
+        self.fitSvm(10)
 
     # Returns structured data to be used in machine learning library
     def preProcess(self, gradResults, goResults):
@@ -107,20 +109,55 @@ class Predictor:
         self.pca.fit(self.trainingData)
 
     # Fit the ML model based on acquired training data
-    def fit(self, numNeighbors):
+    def fitKnn(self, numNeighbors):
         numTraining = self.trainingData.shape[0]
-        self.model = neighbors.KNeighborsClassifier(numNeighbors, weights='distance')
-        self.model.fit(self.pca.transform(self.trainingData), self.trainingLabels.reshape((numTraining,)))
+        self.knn = neighbors.KNeighborsClassifier(numNeighbors, weights='distance')
+        self.knn.fit(self.pca.transform(self.trainingData), self.trainingLabels.reshape((numTraining,)))
+
+    def fitSvm(self, gamma):
+        numTraining = self.trainingData.shape[0]
+        self.svm = svm.SVC(decision_function_shape='ovo',kernel='rbf',gamma=gamma,C=1000)
+        self.svm.fit(self.pca.transform(self.trainingData), self.trainingLabels.reshape((numTraining,)))
 
     # Perform prediction on held-out test data
-    def predict(self, doPrint):
-        predictedLabels = self.model.predict(self.pca.transform(self.testingData))
-
+    def predict(self):
         numTraining = self.trainingData.shape[0]
         numTests = self.testingLabels.shape[0]
-        numCorrect = 0
+
+        print "\n\nNumber of Training Data: {}".format(numTraining)
+        print "Number of Testing Data: {}".format(numTests)
+
+        print "\nClassification using k-Nearest Neighbors"
+
+        self.printResults(self.knn)
+
+        print "\nClassification using SVM with RBF kernel"
+
+        self.printResults(self.svm)
+
+        print '\n\n'
+
+    # Prints the result of predictions
+    def printResults(self, model):
+        numTests = self.testingLabels.shape[0]
+
+        header = ['GPA', 'GRE(V)', 'GRE(Q)', 'GRE(W)', 'Work Exp.', 'Research Exp.', 'Status', 'Decision', 'Predicted']
 
         results = list()
+
+        predictedLabels = model.predict(self.pca.transform(self.testingData))
+        res = self.getResults(predictedLabels, results)
+
+        print 'Accuracy: {:.2f} ({}/{})'.format(res[0], res[1], numTests)
+        print 'Details:'
+
+        pandas.set_option('display.width', 1000)
+        print pandas.DataFrame(results, columns=header, index=range(len(results)))
+
+    # Returns a tuple of accuracy and number of correct predictions
+    def getResults(self, predictedLabels, results):
+        numCorrect = 0
+        numTests = self.testingLabels.shape[0]
 
         for i in range(numTests):
             if predictedLabels[i] == self.testingLabels[i][0]:
@@ -130,53 +167,63 @@ class Predictor:
 
             for j in range(self.testingData.shape[1]):
                 if j > 3:
-                    result.append(int(self.testingData[i,j]))
+                    result.append(int(self.testingData[i, j]))
                 else:
-                    result.append('{:.2f}'.format(self.testingData[i,j]))
+                    result.append('{:.2f}'.format(self.testingData[i, j]))
 
             result.append(int(self.testingLabels[i][0]))
             result.append(int(predictedLabels[i]))
 
             results.append(result)
 
-        accuracy = float(numCorrect) / float(numTests)
-
-        if not doPrint:
-            return accuracy
-
-        print "\n\nClassification using k-Nearest Neighbors"
-        print "Number of Training Data: {}".format(numTraining)
-        print "Number of Testing Data: {}".format(numTests)
-
-        print 'Accuracy: {:.2f} ({}/{})'.format(accuracy, numCorrect, numTests)
-        print 'Details:'
-
-        header = ['GPA', 'GRE(V)', 'GRE(Q)', 'GRE(W)', 'Work Exp.', 'Research Exp.', 'Status', 'Decision', 'Predicted']
-
-        pandas.set_option('display.width', 1000)
-        print pandas.DataFrame(results, columns=header, index=range(len(results)))
-        print '\n\n'
+        return (float(numCorrect) / float(numTests), numCorrect)
 
     # Runs experiment to fit the model using various combination of parameters
     def runExperiment(self):
         numTraining = self.trainingData.shape[0]
 
+        print "\nClassification using k-Nearest Neighbors"
+
         results = list()
 
-        for i in range(1, self.dimension-1, 2):
+        for i in range(1, self.dimension - 1, 2):
             self.performPCA(i)
             for j in range(1, int(numTraining / 3), 2):
-                self.fit(j)
-                accuracy = self.predict(False)
+                self.fitKnn(j)
+                predictedLabels = self.knn.predict(self.pca.transform(self.testingData))
+                res = self.getResults(predictedLabels, list())
 
                 result = list()
                 result.append(i)
                 result.append(j)
-                result.append('{:.2f}'.format(accuracy))
+                result.append('{:.2f}'.format(res[0]))
 
                 results.append(result)
 
-        header = [ 'Num. Dimensions', 'Num. Neighbors', 'Accuracy' ]
+        header = ['Num. Dimensions', 'Num. Neighbors', 'Accuracy']
+
+        pandas.set_option('display.width', 1000)
+        print pandas.DataFrame(results, columns=header, index=range(len(results)))
+
+        print "\nClassification using SVM with RBF kernel"
+
+        results = list()
+
+        for i in range(1, self.dimension - 1, 2):
+            self.performPCA(i)
+            for j in range(100, 1000, 100):
+                self.fitSvm(j)
+                predictedLabels = self.svm.predict(self.pca.transform(self.testingData))
+                res = self.getResults(predictedLabels, list())
+
+                result = list()
+                result.append(i)
+                result.append(j)
+                result.append('{:.2f}'.format(res[0]))
+
+                results.append(result)
+
+        header = ['Num. Dimensions', 'Gamma', 'Accuracy']
 
         pandas.set_option('display.width', 1000)
         print pandas.DataFrame(results, columns=header, index=range(len(results)))
