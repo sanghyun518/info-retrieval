@@ -96,8 +96,16 @@ def validContent(soup):
 
     if anchors:
         for anchor in anchors:
-            for keyword in ['teaching', 'publication', 'cv', 'curriculum vitae']:
+            for keyword in [ 'teaching', 'teachings', 'publication', 'publications', 'cv', 'curriculum vitae' ]:
                 if keyword == anchor.text.lower().strip():
+                    return True
+
+    headings = soup.findAll(re.compile("^h\d"))
+
+    if headings:
+        for heading in headings:
+            for keyword in [ 'research interest', 'areas of interest' ]:
+                if keyword in heading.text.lower():
                     return True
 
     return False
