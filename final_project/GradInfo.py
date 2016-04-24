@@ -118,7 +118,7 @@ while True:
 
         # Print results from different sites
         print "GradCafe Results:\n"
-#        GradCafe.getResults(query, True)
+        GradCafe.getResults(query, True)
 
         print "\n\n"
 
