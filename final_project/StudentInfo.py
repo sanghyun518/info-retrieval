@@ -14,7 +14,6 @@ from bs4 import BeautifulSoup
 # The function will run the query with school name and major. However,
 # if there is no result that matches the query, it will rerun the query with
 # school name only.
-# NOTE : Still need to work on the printing the data
 
 # ============================
 # Get Results using Indeed.com
@@ -38,8 +37,9 @@ def getResults(query) :
         if soup.find_all("li", class_="sre") :
             printResume(soup)
         else :
-            print "No Result Available, Please try with different school."
-
+            print "======================================================="
+            print "No Result Available, Please try with different school! "
+            print "======================================================="
 # Helper function to get html content
 def getContent(schoolName, major="") :
     if len(major) > 0 :
@@ -62,9 +62,43 @@ def printResume(soup) :
         name = link.find("div","app_name").find("a").text
         name = name.replace(" ", "-")
         link = "http://www.indeed.com/r/" + name + "/" + postId
-        print scrape_resume(link)
-        print
+        result = scrape_resume(link)
+        printResult(result)
+        
 
+        
+def printResult(result):
+    print "=================================================================="
+    # print name
+    print "Name : " + str(result['name'])
+    
+    # print webpage applicable 
+    if result['webpage'] :
+        print "Webpage : " + str(result['webpage'][0])
+        
+    # print work & research experience
+    workCount = 1
+    print "------------------------------------------------------------------"
+    for workExp in result['work_experience'] :   
+        print "[Work Experience " + str(workCount) + "]"
+        print "Company Name     : " + workExp['company_name']
+        print "Company Location : "  + workExp['company_location']
+        print "Position         : " + workExp['work_title']
+        print "Dates            : " + workExp['work_dates']
+        workCount += 1
+        
+    # print education information
+    eduCount = 1
+    print "------------------------------------------------------------------"
+    for education in result['education'] :
+        print "[Education " + str(eduCount) + "]"
+        print "School Name      : " + education['school_name']
+        print "Degree           : " + education['degree']
+        print "Dates            : " + education['edu_dates']
+        eduCount += 1
+    print "=================================================================="
+
+    
 # Helper function to grap information from a resume
 def scrape_resume(url) :
     html_content = requests.get(url).text
@@ -89,7 +123,7 @@ def scrape_resume(url) :
     
     # education
     educations = []
-    try :    
+    try :
         edu = soup.find("div", "section-item education-content")
         edus = edu.find_all("div", "data_display")
         edu_info = ["degree", "school_name","school_location", "edu_dates"]
@@ -161,43 +195,3 @@ def scrape_resume(url) :
         person[item[5]] = ""
     
     return person
-
-# =========================================
-# Get Results from Google
-# =========================================
-# def getResults(query):
-#     header = {'User-Agent': 'Mozilla/5.0'}
-
-#     school = query[QueryUtil.schoolKey]
-#     major = query[QueryUtil.majorKey]
-#     degree = query[QueryUtil.degreeKey]
-
-#     # Search using Google
-
-#     queryStr = school + " " + major + " " + degree + " student"
-#     searchResult = QueryUtil.google(queryStr)
-
-#     jsonData = json.loads(searchResult)
-#     studentLink = None
-
-#     if jsonData:
-#         results = jsonData['responseData']['results']
-
-#         if len(results) > 0 :
-#             # Assume the first result has the correct link for student directory
-#             studentLink = results[0]['url']
-
-#     # Check if the link is actually student directory
-
-#     # Start scraping if a link to the student page has been found
-
-
-#     if studentLink :
-#         # Get all links within student directory page
-#         content = requests.get(str(studentLink), headers = header).text
-#         soup = BeautifulSoup(content, "lxml")
-#         refs = soup.find_all("a", href=True)
-
-#         # if refs :
-            
-#     print ""
