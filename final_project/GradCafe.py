@@ -37,7 +37,7 @@ def getResults(query, doPrint):
     features = list()  # Vectors to be used for machine learning
 
     # Get results for first page
-    getResult(degree, features, header, results, soup, doPrint)
+    getResult(degree, features, header, results, soup, doPrint, True)
 
     currentPage = numPages + 1 if doPrint else 2
 
@@ -49,7 +49,7 @@ def getResults(query, doPrint):
         html_content = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}).text
         soup = BeautifulSoup(html_content, "lxml")
 
-        getResult(degree, features, None, results, soup, doPrint)
+        getResult(degree, features, None, results, soup, doPrint, False)
 
         currentPage = currentPage + 1
 
@@ -63,7 +63,7 @@ def getResults(query, doPrint):
     return features
 
 # Scrapes results for a single page
-def getResult(degree, featureVectors, header, results, soup, doPrint):
+def getResult(degree, featureVectors, header, results, soup, doPrint, fillHeader):
     table = soup.find('table')
 
     if not table:
@@ -116,13 +116,13 @@ def getResult(degree, featureVectors, header, results, soup, doPrint):
         if not validResult:
             continue
 
-        if gpaScore is None or greScore is None:
+        if i > 0 and (gpaScore is None or greScore is None):
             continue
 
         colTexts = colTexts[1:]  # Do not show 'institution'
 
         if i == 0:
-            if header:
+            if fillHeader:
                 # Header
                 colTexts[1] = 'Decision'
                 colTexts.insert(0, 'GRE')
