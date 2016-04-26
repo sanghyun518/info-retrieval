@@ -1,12 +1,14 @@
 """
 Scrapes http://www.gohackers.com/ for admission results
 """
+from __future__ import print_function
 import re
 import requests
 import QueryUtil
 from bs4 import BeautifulSoup
 import pandas
 import threading
+
 
 ########################################################################################################################
 # The parameter 'query' is a dictionary of query information,
@@ -15,17 +17,6 @@ import threading
 # and reuturns the list of results in dictionary format with keys that are written in QueyUtil.py
 # for example, { 'decision': 1, 'greVerbal': 500, 'greQuant': 700, 'greWriting': 4.0, 'gpaScore':3.5/4.0 and etc}
 ########################################################################################################################
-# Note to concern:
-# 1. Display format ex. decision, workExp, researchExp instead of 1,
-#    want to display Accepted/Rejected or True/False in the future.
-# 2. Note that it may take a significantly long time depending on the number of posts to look for. (apprx. 2.4 sec per post)
-# 3. Number of results can be decreased if query is complex. (ex. school name & non-popular major & phd)
-#    Almost less than 5 or None
-# 4. There are some special cases where user did not followed the format as the others write the post.
-#    For example, id='content_5' mostly contains GRE or Test Scores, but rarely some people put it in id='content_1'/
-#    In this case, the scores are stated as 0.
-# 5. Improvements can be made to handle special cases, date of notice.
-######################################################################################################################
 def getResults(query, doPrint) :
     # Base url
     base_url = "http://www.gohackers.com"
@@ -62,7 +53,7 @@ def getResults(query, doPrint) :
         post_subjects = getPostSubjects(url)
 
         if doPrint :
-            print "Total : " + str(len(post_subjects)-5) + " posts"
+            print("Total : " + str(len(post_subjects)-5) + " posts")
 
         # Get result from each post in one page
         for subject in post_subjects :
@@ -74,7 +65,6 @@ def getResults(query, doPrint) :
                 # Get Result from each post
                 thread = threading.Thread(target=getResult, args=(base_url+a['href'], query[QueryUtil.schoolKey].lower(), results))
                 threads.append(thread)
-                print ">>",
     print
 
     # Start each thread
@@ -87,15 +77,29 @@ def getResults(query, doPrint) :
 
     if doPrint:
         if len(results) > 0 :
-            # Use 'pandas' library for neat tabular representation
-            pandas.set_option('display.width', 1000)
-
-            # Print only the first 15 results
-            print pandas.DataFrame(results[0:15])
+            # Print results neatly
+            printResults(results)
         else :
-            "Could not find any result that matches to given query."
+            print ("Could not find any result that matches to given query.")
 
     return results
+
+def printResults(results) :
+    print ("     GPA      GRE        Decision  St1   Research   WorkExp")
+    count = 0
+    for result in results :
+        print (str(count), end = "")
+        print ("   " if count < 10 else "  ", end = "")
+        print (result['gpaScore'][0:4] if result['gpaScore']>0 else "   0", end = "  ")
+        print (str(result['greVerbal']) if result['greVerbal'] > 0 else " 0 ", end = "/")
+        print (str(result['greQuant']) if result['greQuant'] > 0 else " 0 ", end = "/")
+        print (str(result['greWriting']) if result['greWriting'] > 0 else " 0 ", end = "    ")
+        print ("Accepted" if result['decision'] else "Rejected", end = "  ")
+        print (" I ", end = "     ")
+        print (" True" if result['research'] else "False", end = "     ")
+        print (" True" if result['workExp'] else "False", end = "\n")
+        count += 1
+
 
 ###############################################################
 # Helper function to retrieve information from each post
@@ -124,7 +128,7 @@ def getResult(url, schoolName, results) :
         if (schoolName in soup.find("td",id="content_1").text.encode("utf-8","ignore").lower()) :
             result[header[0]] = 1
     except Exception as ex :
-        print "Cannot find Acceptance List"
+        print( "Cannot find Acceptance List" )
 
     try :
         # Get gre scores
@@ -141,7 +145,7 @@ def getResult(url, schoolName, results) :
         else :
             "=============== Cannot Find GRE Schores ==============="
     except Exception as ex :
-        print "Cannot find TestScores"
+        print ("Cannot find TestScores")
 
     # Get GPA
     try :
@@ -157,7 +161,7 @@ def getResult(url, schoolName, results) :
         else :
             "=============== Cannot find GPA ================"
     except Exception as ex :
-        print "Cannot find GPAs"
+        print ("Cannot find GPAs")
 
     # Get Work and Research experience
     try :
@@ -177,14 +181,14 @@ def getResult(url, schoolName, results) :
             # print resMatch.group()
             result[header[6]] = 1
     except Exception as ex :
-        print "Cannot find experiences"
+        print ("Cannot find experiences")
 
     # Store the post ID
     try :
         gid_regex = re.search("uid=([0-9]+)", url)
         result[header[8]] = gid_regex.group(1)
     except Exception as ex :
-        print "Cannot get the UID"
+        print ("Cannot get the UID")
 
     results.append(result)
 
@@ -203,7 +207,7 @@ def getTotalPageNum(url) :
         if subject.a.b == None :
             tr_tag = subject.parent
             tot_num = int(tr_tag.find("td").text)
-            print "Total : " + str(tot_num) + " posts"
+            print ("Total : " + str(tot_num) + " posts")
             break
 
     tot_pages = tot_num / 70
