@@ -19,24 +19,15 @@ def getResults(query):
     # Search using Google
 
     queryStr = school +  ' ' + major + ' faculty'
-    searchResult = QueryUtil.google(queryStr)
-
-    jsonData = json.loads(searchResult)
-
-    facultyLink = None
-
-    if jsonData:
-        results = jsonData['responseData']['results']
-
-        if len(results) > 0:
-            # Assume first result has the correct faculty link (trusting Google)
-            facultyLink = results[0]['url']
+    facultyLink = QueryUtil.google(queryStr)
 
     # Start scraping if a link to the faculty page has been found
 
     counter = 0
 
     if facultyLink:
+        print '\nSearching "' + facultyLink + '"\n'
+
         # Get base URL to deal with relative URLs
         domain = '{uri.scheme}://{uri.netloc}/'.format(uri=urlparse(facultyLink))
 

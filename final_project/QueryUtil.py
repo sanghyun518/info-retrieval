@@ -3,6 +3,7 @@ Contains common constants and functions useful for querying data
 """
 
 import requests
+import re
 
 # Query keys
 
@@ -59,9 +60,18 @@ def refineQuery(query):
         # Produces better result for GoHackers
         query[majorKey] = 'Econ'
 
+# Very inefficient Google search (Google AJAX Crawling has been deprecated...)
 def google(query):
-    link = 'http://ajax.googleapis.com/ajax/services/search/web?v=1.0&%s' % query
+    query = '+'.join(query.split())
+    link = 'http://www.google.com/search?q=' + query
     ua = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.116 Safari/537.36'}
-    payload = {'q': query}
-    response = requests.get(link, headers=ua, params=payload)
-    return response.text
+    response = requests.get(link, headers=ua).text
+    matches = re.finditer(r'<a href="((?:(?!onmousedown|href).)*)" onmousedown', response)
+    if matches:
+        for match in matches:
+            if match.group(1).startswith('http'):
+                return match.group(1)
+
+    return None
+
+
